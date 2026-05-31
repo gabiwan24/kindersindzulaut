@@ -1,21 +1,24 @@
 <!DOCTYPE html>
-<html lang="de" class="h-full">
+<html lang="de" class="h-full select-none">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AcousticMeter - Mobiler Lautstärkemesser</title>
-    <!-- Tailwind CSS für erstklassiges UI-Design -->
+    <title>Flüster-Monster &bull; Spielend leise sein</title>
+    <!-- Tailwind CSS für modernstes Design -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Lucide Icons via CDN -->
+    <!-- Lucide Icons für minimale Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        /* Sanfte Farb- und UI-Übergänge */
+        /* Extrem geschmeidige Hintergrundübergänge für den Monochrom-Effekt */
         body {
-            transition: background-color 0.3s ease, color 0.3s ease;
+            transition: background-color 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
         }
+        
+        /* Sidebar sanft ein- und ausschieben */
         .sidebar-transition {
             transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
+
         /* Pulsierender Effekt für den Sender-Button */
         @keyframes pulse-glowing {
             0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
@@ -25,148 +28,280 @@
         .pulse-active {
             animation: pulse-glowing 2s infinite;
         }
-        /* Pulsierender Effekt für den inaktiven Mikrofon-Button */
-        @keyframes pulse-emerald {
-            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6); }
-            70% { transform: scale(1.05); box-shadow: 0 0 0 15px rgba(16, 185, 129, 0); }
-            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        
+        /* Lebendige, organische Animationen für die Monster */
+        @keyframes float-animation {
+            0% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(var(--float-distance, -10px)) rotate(var(--float-rotate, 3deg)); }
+            100% { transform: translateY(0px) rotate(0deg); }
         }
-        .pulse-emerald-active {
-            animation: pulse-emerald 2s infinite;
+        
+        @keyframes blink-animation {
+            0%, 93%, 100% { transform: scaleY(1); }
+            96.5% { transform: scaleY(0.1); }
+        }
+
+        .monster-float {
+            animation: float-animation var(--float-duration, 4s) ease-in-out infinite;
+            animation-delay: var(--float-delay, 0s);
+            /* Schönes, weiches Einblenden mit elastischem Federeffekt */
+            transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.5s ease;
+        }
+
+        /* Schnelles, wuchtiges Platzen überschreibt die langsame Transition */
+        .monster-float.popped {
+            transition: transform 0.08s cubic-bezier(0.6, -0.28, 0.735, 0.045), opacity 0.08s ease !important;
+            transform: scale(0) !important;
+            opacity: 0 !important;
+            pointer-events: none;
+        }
+
+        .eye-blink {
+            animation: blink-animation var(--blink-duration, 5s) ease-in-out infinite;
+            animation-delay: var(--blink-delay, 0s);
+            transform-origin: center;
+        }
+
+        /* Partikel-Effekt beim Platzen */
+        .pop-particle {
+            position: absolute;
+            pointer-events: none;
+            border-radius: 50%;
+            animation: particle-explode 0.7s cubic-bezier(0.1, 0.9, 0.2, 1) forwards;
+        }
+
+        @keyframes particle-explode {
+            0% {
+                transform: translate(0, 0) scale(1.2);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(var(--tx), var(--ty)) scale(0);
+                opacity: 0;
+            }
+        }
+
+        /* Druckwellen-Ring beim Platzen */
+        .shockwave {
+            position: absolute;
+            border-radius: 50%;
+            pointer-events: none;
+            transform: translate(-50%, -50%) scale(0.1);
+            opacity: 1;
+            animation: shockwave-expand 0.45s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+        }
+
+        @keyframes shockwave-expand {
+            0% {
+                transform: translate(-50%, -50%) scale(0.1);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(-50%, -50%) scale(1.6);
+                opacity: 0;
+            }
         }
     </style>
 </head>
-<body class="h-full text-slate-100 flex flex-col justify-between overflow-hidden bg-slate-950 font-sans">
+<body class="h-full text-slate-100 flex flex-col justify-between overflow-hidden bg-black font-sans relative">
 
-    <!-- HEADER -->
-    <header class="w-full px-6 py-4 flex items-center justify-between z-10 bg-slate-900/60 backdrop-blur-md border-b border-slate-800/40">
+    <!-- START SCREEN OVERLAY -->
+    <div id="start-overlay" class="absolute inset-0 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center p-6 z-50 transition-opacity duration-500">
+        <div class="max-w-md text-center space-y-8">
+            <div class="flex justify-center space-x-2 animate-bounce">
+                <!-- Kleine Vorschau-Monster -->
+                <div class="w-10 h-10 rounded-full bg-pink-500 flex items-center justify-center border border-white/20">
+                    <div class="w-2.5 h-3 bg-white rounded-full flex items-center justify-center mx-0.5"><div class="w-1.5 h-1.5 bg-black rounded-full"></div></div>
+                    <div class="w-2.5 h-3 bg-white rounded-full flex items-center justify-center mx-0.5"><div class="w-1.5 h-1.5 bg-black rounded-full"></div></div>
+                </div>
+                <div class="w-12 h-12 rounded-full bg-emerald-500 flex items-center justify-center border border-white/20">
+                    <div class="w-4 h-5 bg-white rounded-full flex items-center justify-center mx-0.5"><div class="w-2 h-2 bg-black rounded-full"></div></div>
+                    <div class="w-2 h-3.5 bg-white rounded-full flex items-center justify-center mx-0.5"><div class="w-1 h-1 bg-black rounded-full"></div></div>
+                </div>
+                <div class="w-10 h-10 rounded-full bg-amber-500 flex items-center justify-center border border-white/20">
+                    <div class="w-1.5 h-2 bg-white rounded-full flex items-center justify-center mx-0.5"><div class="w-1 h-1 bg-black rounded-full"></div></div>
+                    <div class="w-1.5 h-2 bg-white rounded-full flex items-center justify-center mx-0.5"><div class="w-1 h-1 bg-black rounded-full"></div></div>
+                </div>
+            </div>
+            
+            <div class="space-y-3">
+                <h1 class="text-4xl font-extrabold tracking-tight text-white">Das Flüster-Spiel</h1>
+                <p class="text-slate-400 text-sm leading-relaxed">
+                    Wecke die kleinen Monster auf! Sie lieben die Stille. Wenn es im Raum zu laut wird, erschrecken sie und platzen weg. Schafft ihr es, dass alle Monster am Leben bleiben?
+                </p>
+            </div>
+
+            <button id="start-btn" class="px-8 py-4 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-lg rounded-2xl shadow-xl hover:scale-105 transition-all duration-300 flex items-center justify-center space-x-3 w-full">
+                <i data-lucide="play" class="w-6 h-6 fill-current"></i>
+                <span>Monster aufwecken!</span>
+            </button>
+            
+            <p class="text-[11px] text-slate-600">
+                Hinweis: Das Spiel benötigt Zugriff auf dein Mikrofon, um die Lautstärke zu erfassen. Alle Daten bleiben lokal auf deinem Gerät.
+            </p>
+        </div>
+    </div>
+
+    <!-- TOP MINIMAL NAVIGATION -->
+    <header class="absolute top-0 inset-x-0 h-16 px-6 flex items-center justify-between z-40 bg-black/40 backdrop-blur-sm border-b border-white/5">
         <div class="flex items-center space-x-2">
-            <div class="w-3 h-3 rounded-full bg-slate-700 animate-pulse" id="status-led"></div>
-            <span class="font-bold tracking-wider text-lg">ACOUSTIC<span class="text-emerald-400">METER</span></span>
+            <div class="w-3 h-3 rounded-full bg-emerald-500" id="status-led"></div>
+            <span class="font-bold tracking-wider text-xs uppercase text-slate-400" id="role-badge">Empfänger</span>
         </div>
         
-        <div class="flex items-center space-x-4">
-            <!-- Aktueller Modus-Badge -->
-            <span id="role-badge" class="px-3 py-1 text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full">
-                Modus: Empfänger
-            </span>
-            <!-- Hamburger Button -->
-            <button id="menu-toggle" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 focus:outline-none transition-colors" aria-label="Menü öffnen">
-                <i data-lucide="menu" class="w-6 h-6"></i>
-            </button>
-        </div>
+        <!-- Hamburger Button für die Kalibrierung / Einstellungen -->
+        <button id="menu-toggle" class="p-2 rounded-xl bg-black/60 hover:bg-black/90 text-slate-400 hover:text-white transition-all border border-white/10">
+            <i data-lucide="menu" class="w-5 h-5"></i>
+        </button>
     </header>
 
-    <!-- MAIN INTERFACE -->
-    <main class="flex-1 flex flex-col items-center justify-center px-4 relative">
+    <!-- MAIN INTERFACE CONTAINER -->
+    <div class="flex-1 w-full h-full relative overflow-hidden">
         
-        <!-- ================= EMPFÄNGER INTERFACE ================= -->
-        <div id="receiver-view" class="w-full max-w-lg flex flex-col items-center justify-center space-y-8 py-6">
-            <!-- Haupt-Kreisanzeige (dB-Meter) -->
-            <div class="relative w-72 h-72 rounded-full border-4 border-slate-800/80 bg-slate-950/40 backdrop-blur-lg flex flex-col items-center justify-center shadow-2xl transition-all duration-300" id="db-circle">
-                <div class="absolute inset-4 rounded-full border border-dashed border-slate-700/50"></div>
-                
-                <!-- Mikrofon-Symbol / Startknopf im Kreis (Pulsiert, wenn inaktiv) -->
-                <button id="mic-toggle-btn" class="w-16 h-16 rounded-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 flex items-center justify-center transition-transform hover:scale-105 shadow-lg mb-2 focus:outline-none pulse-emerald-active">
-                    <i data-lucide="mic" class="w-8 h-8" id="mic-icon"></i>
-                </button>
+        <!-- ================= EMPFÄNGER VIEW (Das Monster-Spiel) ================= -->
+        <main id="game-area" class="w-full h-full absolute inset-0 z-10">
+            <!-- Hier werden die Monster dynamisch per JS eingefügt -->
+        </main>
 
-                <!-- Numerische Anzeige -->
-                <div class="text-center">
-                    <span id="db-value" class="text-6xl font-black tracking-tighter">0.0</span>
-                    <span class="text-xl font-medium text-slate-400 block -mt-1">dB (SPL)</span>
-                </div>
-                
-                <!-- Lautstärkecharakteristik Beschreibung -->
-                <div id="db-desc" class="text-sm font-semibold tracking-wide text-slate-400 mt-2 bg-slate-900/80 px-3 py-1 rounded-full border border-slate-800/60">
-                    Klicke auf das Mikrofon zum Starten
-                </div>
-            </div>
-
-            <!-- Pegelbalken (Schnellanzeige) -->
-            <div class="w-full bg-slate-900/60 border border-slate-800 rounded-2xl p-4 shadow-lg backdrop-blur-sm">
-                <div class="flex justify-between text-xs text-slate-400 mb-2 font-mono">
-                    <span>0 dB (Ruhe)</span>
-                    <span>60 dB (Gespräch)</span>
-                    <span>120 dB (Schmerzgrenze)</span>
-                </div>
-                <div class="w-full h-4 bg-slate-950 rounded-full overflow-hidden p-0.5 border border-slate-800">
-                    <div id="volume-bar" class="h-full w-0 bg-gradient-to-r from-emerald-500 via-amber-500 to-rose-500 rounded-full transition-all duration-75"></div>
-                </div>
-            </div>
-
-            <!-- Live-Zeitverlauf (Scrolling Canvas) -->
-            <div class="w-full bg-slate-900/60 border border-slate-800 rounded-2xl p-3 shadow-lg backdrop-blur-sm">
-                <div class="flex items-center space-x-1.5 text-xs text-slate-400 mb-2 uppercase tracking-wider font-semibold">
-                    <i data-lucide="activity" class="w-4 h-4 text-emerald-400"></i>
-                    <span>Zeitverlauf (Letzte 15 Sek.)</span>
-                </div>
-                <canvas id="history-chart" class="w-full h-24 bg-slate-950/80 rounded-lg border border-slate-900"></canvas>
-            </div>
-        </div>
-
-        <!-- ================= SENDER INTERFACE (Standardmäßig versteckt) ================= -->
-        <div id="sender-view" class="w-full max-w-lg hidden flex flex-col items-center justify-center space-y-8 py-6">
-            <div class="text-center max-w-md">
-                <h2 class="text-2xl font-bold mb-2 text-rose-400">Kalibrierton-Generator</h2>
-                <p class="text-sm text-slate-400 leading-relaxed">
+        <!-- ================= SENDER VIEW (Der Testton-Generator) ================= -->
+        <div id="sender-view" class="hidden w-full h-full absolute inset-0 z-20 flex flex-col items-center justify-center px-4 bg-slate-950">
+            <div class="text-center max-w-md mb-8 space-y-2">
+                <h2 class="text-2xl font-bold text-rose-400">Kalibrierton-Generator</h2>
+                <p class="text-xs text-slate-400 leading-relaxed">
                     Dieses Gerät dient als Tonquelle. Platziere es in typischem Abstand (z.B. 1 Meter) zum Empfänger-Laptop, um die Messgenauigkeit abzugleichen.
                 </p>
             </div>
 
             <!-- Großer Testton-Button -->
-            <button id="tone-toggle-btn" class="w-64 h-64 rounded-full border-8 border-slate-800/80 bg-slate-950/60 backdrop-blur-lg flex flex-col items-center justify-center shadow-2xl transition-all duration-300 focus:outline-none">
-                <div id="tone-btn-inner" class="w-48 h-48 rounded-full bg-rose-600 hover:bg-rose-500 text-white flex flex-col items-center justify-center shadow-lg transition-colors">
-                    <i data-lucide="volume-2" class="w-16 h-16 mb-2" id="tone-icon"></i>
-                    <span id="tone-btn-text" class="font-bold tracking-wide text-sm">TON STARTEN</span>
+            <button id="tone-toggle-btn" class="w-48 h-48 rounded-full border-4 border-slate-800 bg-slate-900/40 flex items-center justify-center shadow-2xl transition-all focus:outline-none mb-8">
+                <div id="tone-btn-inner" class="w-36 h-36 rounded-full bg-rose-600 hover:bg-rose-500 text-white flex flex-col items-center justify-center shadow-lg transition-colors">
+                    <i data-lucide="volume-2" class="w-10 h-10 mb-2" id="tone-icon"></i>
+                    <span id="tone-btn-text" class="font-bold tracking-wide text-xs">TON STARTEN</span>
                 </div>
             </button>
 
-            <!-- Sender Controls -->
-            <div class="w-full bg-slate-900/60 border border-slate-800 rounded-2xl p-5 shadow-lg backdrop-blur-sm space-y-4">
+            <!-- Sender Regler -->
+            <div class="w-full max-w-xs bg-slate-900/60 border border-slate-800 rounded-2xl p-4 shadow-lg space-y-3">
                 <div>
-                    <div class="flex justify-between text-sm font-semibold mb-2">
-                        <span>Frequenz (Sinuswelle)</span>
+                    <div class="flex justify-between text-xs font-semibold mb-1">
+                        <span>Frequenz</span>
                         <span id="freq-label" class="text-rose-400 font-mono">1000 Hz</span>
                     </div>
-                    <input type="range" id="freq-slider" min="440" max="2000" step="10" value="1000" class="w-full accent-rose-500 h-2 bg-slate-950 rounded-lg appearance-none cursor-pointer">
+                    <input type="range" id="freq-slider" min="440" max="2000" step="10" value="1000" class="w-full accent-rose-500 h-1.5 bg-slate-950 rounded-lg appearance-none cursor-pointer">
                 </div>
-
                 <div>
-                    <div class="flex justify-between text-sm font-semibold mb-2">
-                        <span>Sender-Lautstärke</span>
+                    <div class="flex justify-between text-xs font-semibold mb-1">
+                        <span>Lautstärke</span>
                         <span id="volume-label" class="text-rose-400 font-mono">80%</span>
                     </div>
-                    <input type="range" id="volume-slider" min="0" max="100" step="5" value="80" class="w-full accent-rose-500 h-2 bg-slate-950 rounded-lg appearance-none cursor-pointer">
+                    <input type="range" id="volume-slider" min="0" max="100" step="5" value="80" class="w-full accent-rose-500 h-1.5 bg-slate-950 rounded-lg appearance-none cursor-pointer">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TINY HUD (Dezente dB-Anzeige rechts unten) -->
+    <div class="absolute bottom-4 right-4 bg-black/70 backdrop-blur-sm border border-white/10 rounded-xl px-3 py-1.5 text-xs text-slate-300 font-mono flex items-center space-x-2 z-30 pointer-events-none">
+        <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" id="pulse-dot"></div>
+        <!-- Globaler Cooldown-Countdown (erscheint nur, wenn Lärm blockiert) -->
+        <span id="cooldown-display" class="hidden text-rose-400 border-r border-white/10 pr-2 mr-1">Sperre: 15s</span>
+        <span id="db-display">0.0 dB</span>
+    </div>
+
+    <!-- SIDEBAR MENU -->
+    <div id="sidebar" class="fixed top-0 right-0 h-full w-80 bg-black/90 backdrop-blur-md border-l border-white/10 z-50 sidebar-transition translate-x-full shadow-2xl flex flex-col justify-between">
+        <div class="p-6 space-y-6 overflow-y-auto flex-1">
+            <div class="flex items-center justify-between border-b border-white/10 pb-4">
+                <h3 class="text-lg font-bold">Einstellungen</h3>
+                <button id="menu-close" class="p-1 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <!-- Geräte-Rolle definieren -->
+            <div class="space-y-3">
+                <h4 class="text-xs font-semibold tracking-wider text-slate-400 uppercase">Geräte-Rolle</h4>
+                <div class="grid grid-cols-2 gap-2 bg-black/50 p-1 rounded-xl border border-white/5">
+                    <button id="set-receiver-btn" class="py-2 text-xs font-bold rounded-lg transition-colors bg-emerald-500 text-slate-950">
+                        Empfänger
+                    </button>
+                    <button id="set-sender-btn" class="py-2 text-xs font-bold rounded-lg transition-colors text-slate-400 hover:text-slate-100">
+                        Sender
+                    </button>
+                </div>
+            </div>
+
+            <!-- Empfänger-Einstellungs-Panel (Nur sichtbar wenn Empfänger aktiv) -->
+            <div id="receiver-settings-panel" class="space-y-5">
+                <!-- NEU: Kritischer Lautstärkewert (Lärm-Alarmgrenze) -->
+                <div class="space-y-2">
+                    <div class="flex justify-between items-center">
+                        <h4 class="text-xs font-semibold tracking-wider text-slate-400 uppercase">Kritische Lautstärke (Limit)</h4>
+                        <span id="critical-label" class="text-xs font-bold text-rose-400 font-mono">75 dB</span>
+                    </div>
+                    <input type="range" id="critical-slider" min="50" max="95" step="1" value="75" class="w-full accent-rose-500 h-1.5 bg-slate-950 rounded-lg appearance-none cursor-pointer">
+                    <p class="text-[10px] text-slate-500 leading-tight">
+                        Bestimmt, ab wie viel dB das letzte Monster platzt und der Bildschirm komplett weiß wird.
+                    </p>
+                </div>
+
+                <!-- Kalibrierung starten Button -->
+                <div class="space-y-3">
+                    <h4 class="text-xs font-semibold tracking-wider text-slate-400 uppercase">Eichung</h4>
+                    <button id="open-cal-modal-btn" class="w-full py-3 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 hover:text-emerald-300 font-bold rounded-xl transition-all flex items-center justify-center space-x-2">
+                        <i data-lucide="sliders" class="w-4 h-4"></i>
+                        <span>Automatisch Kalibrieren</span>
+                    </button>
+                </div>
+
+                <!-- Manueller Offset Schieberegler -->
+                <div class="space-y-2">
+                    <div class="flex justify-between items-center">
+                        <h4 class="text-xs font-semibold tracking-wider text-slate-400 uppercase">Mikrofon-Empfindlichkeit</h4>
+                        <span id="offset-label" class="text-xs font-bold text-emerald-400 font-mono">+100.0 dB</span>
+                    </div>
+                    <input type="range" id="offset-slider" min="50" max="130" step="0.5" value="100" class="w-full accent-emerald-500 h-1.5 bg-slate-950 rounded-lg appearance-none cursor-pointer">
+                    <p class="text-[10px] text-slate-500 leading-tight">
+                        Schiebe nach rechts, wenn die Anzeige generell zu niedrige dB-Werte liefert.
+                    </p>
+                </div>
+
+                <!-- Dämpfung -->
+                <div class="space-y-2">
+                    <h4 class="text-xs font-semibold tracking-wider text-slate-400 uppercase">Reaktionszeit (Dämpfung)</h4>
+                    <select id="damping-select" class="w-full bg-black border border-white/10 rounded-xl p-2.5 text-xs font-semibold text-slate-300 focus:outline-none focus:border-emerald-500">
+                        <option value="0.95">Sehr träge (Sehr ruhige Bewegungen)</option>
+                        <option value="0.85" selected>Standard (Flüssig & ausgeglichen)</option>
+                        <option value="0.60">Sehr direkt (Extrem empfindliche Reaktionen)</option>
+                    </select>
+                </div>
+
+                <div class="pt-2 border-t border-white/5">
+                    <div class="flex items-center space-x-1 text-[10px] text-emerald-400">
+                        <i data-lucide="filter" class="w-3.5 h-3.5"></i>
+                        <span class="font-bold uppercase tracking-wider">Aktiv: Stimmen-Bandpassfilter</span>
+                    </div>
+                    <p class="text-[9px] text-slate-500 mt-1 leading-relaxed">
+                        Hintergrundbrummen und statisches Rauschen werden automatisch gedämpft, um die App auf menschliche Stimmen zu fokussieren.
+                    </p>
                 </div>
             </div>
         </div>
 
-    </main>
-
-    <!-- CUSTOM NOTIFICATION BANNER (Als Ersatz für unschöne alerts) -->
-    <div id="notification-banner" class="fixed top-20 left-1/2 -translate-x-1/2 w-[90%] max-w-md p-4 rounded-xl bg-slate-900 border border-slate-800 shadow-2xl flex items-start space-x-3 transform -translate-y-32 opacity-0 transition-all duration-300 z-50">
-        <div class="p-1 rounded bg-slate-800" id="notification-icon-wrapper">
-            <i data-lucide="info" class="w-5 h-5 text-emerald-400" id="notification-icon"></i>
+        <div class="p-6 bg-black border-t border-white/5 text-[10px] text-slate-500 text-center">
+            Flüster-Monster v1.6 &bull; Keine rechtliche Relevanz.
         </div>
-        <div class="flex-1">
-            <h4 id="notification-title" class="font-bold text-sm">Hinweis</h4>
-            <p id="notification-message" class="text-xs text-slate-400 mt-1">Nachricht wird geladen...</p>
-        </div>
-        <button id="notification-close" class="text-slate-500 hover:text-slate-300">
-            <i data-lucide="x" class="w-4 h-4"></i>
-        </button>
     </div>
 
     <!-- CALIBRATION MODAL (EMPFÄNGER) -->
-    <div id="calibration-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-40 hidden opacity-0 transition-opacity duration-300">
-        <div class="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-6">
+    <div id="calibration-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50 hidden opacity-0 transition-opacity duration-300">
+        <div class="w-full max-w-md bg-slate-900 border border-white/10 rounded-3xl p-6 shadow-2xl space-y-6 text-slate-100">
             <div class="flex justify-between items-start">
                 <div class="flex items-center space-x-2">
                     <i data-lucide="sliders" class="w-6 h-6 text-emerald-400"></i>
                     <h3 class="text-xl font-bold">Geräte-Kalibrierung</h3>
                 </div>
-                <button id="close-modal-btn" class="p-1 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors">
+                <button id="close-modal-btn" class="p-1 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
             </div>
@@ -174,19 +309,20 @@
             <!-- Schritt-für-Schritt-Anleitung -->
             <div id="cal-step-1" class="space-y-4">
                 <p class="text-sm text-slate-300 leading-relaxed">
-                    Führe diese Schritte aus, um einen angenäherten Dezibelwert für dein Laptop-Mikrofon einzustellen:
+                    Kalibriere die Monster auf dein Laptop-Mikrofon:
                 </p>
-                <ol class="space-y-3 text-xs text-slate-400 list-decimal pl-4">
-                    <li>Öffne diese Website auf einem **zweiten Gerät** (z.B. Handy) und stelle es im Menü auf <strong class="text-rose-400">"Sender"</strong> um.</li>
+                <ol class="space-y-3 text-xs text-slate-400 list-decimal pl-4 leading-relaxed">
+                    <li>Öffne dieses Spiel auf einem **zweiten Gerät** (z.B. Handy).</li>
+                    <li>Stelle dieses Handy über das Menü oben rechts auf <strong class="text-rose-400">"Sender"</strong> um.</li>
                     <li>Platziere das Handy ca. **1 Meter entfernt** von diesem Laptop.</li>
-                    <li>Starte den Testton auf dem Handy. Achte darauf, dass der Raum ansonsten absolut **leise** ist.</li>
-                    <li>Klicke unten auf <strong class="text-emerald-400">"Messen & Kalibrieren"</strong>. Das Messgerät analysiert den Pegel des Testtons für 3 Sekunden und passt den Offset an.</li>
+                    <li>Starte den Testton auf dem Handy. Stelle sicher, dass der Raum ansonsten **still** ist.</li>
+                    <li>Klicke unten auf <strong class="text-emerald-400">"Messen & Kalibrieren"</strong>. Die Software misst den Ton für 3 Sekunden und gleicht sich automatisch ab.</li>
                 </ol>
                 
-                <div class="bg-slate-950/80 rounded-xl p-3 border border-slate-800 text-xs flex justify-between items-center">
-                    <span class="text-slate-400">Zielwert für Referenzton:</span>
+                <div class="bg-black/40 rounded-xl p-3 border border-white/5 text-xs flex justify-between items-center">
+                    <span class="text-slate-400">Zielwert des Referenztons:</span>
                     <div class="flex items-center space-x-2">
-                        <input type="number" id="target-db-input" value="70" class="w-12 bg-slate-900 text-center font-bold text-emerald-400 border border-slate-700 rounded p-1 focus:outline-none focus:border-emerald-500">
+                        <input type="number" id="target-db-input" value="70" class="w-12 bg-black text-center font-bold text-emerald-400 border border-white/10 rounded p-1 focus:outline-none focus:border-emerald-500">
                         <span class="font-semibold">dB</span>
                     </div>
                 </div>
@@ -206,7 +342,7 @@
                     <h4 class="font-bold text-lg text-emerald-400">Messung läuft...</h4>
                     <p class="text-xs text-slate-400 mt-1">Bitte halte den Raum leise und den Testton konstant.</p>
                 </div>
-                <div class="w-full bg-slate-950 rounded-full h-2 overflow-hidden max-w-xs">
+                <div class="w-full bg-black rounded-full h-2 overflow-hidden max-w-xs">
                     <div id="cal-progress-bar" class="bg-emerald-500 h-full w-0 transition-all duration-100"></div>
                 </div>
             </div>
@@ -227,94 +363,40 @@
         </div>
     </div>
 
-    <!-- SIDEBAR MENU -->
-    <div id="sidebar" class="fixed top-0 right-0 h-full w-80 bg-slate-900/95 backdrop-blur-md border-l border-slate-800/80 z-30 sidebar-transition translate-x-full shadow-2xl flex flex-col justify-between">
-        <div class="p-6 space-y-8 overflow-y-auto flex-1">
-            <div class="flex items-center justify-between border-b border-slate-800 pb-4">
-                <h3 class="text-lg font-bold">Einstellungen</h3>
-                <button id="menu-close" class="p-1 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors">
-                    <i data-lucide="x" class="w-5 h-5"></i>
-                </button>
-            </div>
-
-            <!-- Geräte-Rolle definieren -->
-            <div class="space-y-3">
-                <h4 class="text-xs font-semibold tracking-wider text-slate-400 uppercase">Geräte-Rolle</h4>
-                <div class="grid grid-cols-2 gap-2 bg-slate-950 p-1 rounded-xl border border-slate-800">
-                    <button id="set-receiver-btn" class="py-2 text-xs font-bold rounded-lg transition-colors bg-emerald-500 text-slate-950">
-                        Empfänger
-                    </button>
-                    <button id="set-sender-btn" class="py-2 text-xs font-bold rounded-lg transition-colors text-slate-400 hover:text-slate-100">
-                        Sender
-                    </button>
-                </div>
-            </div>
-
-            <!-- Empfänger-Einstellungs-Panel (Nur sichtbar wenn Empfänger aktiv) -->
-            <div id="receiver-settings-panel" class="space-y-6">
-                <!-- Kalibrierung starten Button -->
-                <div class="space-y-3">
-                    <h4 class="text-xs font-semibold tracking-wider text-slate-400 uppercase">Eichung</h4>
-                    <button id="open-cal-modal-btn" class="w-full py-3 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 hover:text-emerald-300 font-bold rounded-xl transition-all flex items-center justify-center space-x-2">
-                        <i data-lucide="sliders" class="w-4 h-4"></i>
-                        <span>Automatisch Kalibrieren</span>
-                    </button>
-                </div>
-
-                <!-- Manueller Offset Schieberegler -->
-                <div class="space-y-3">
-                    <div class="flex justify-between items-center">
-                        <h4 class="text-xs font-semibold tracking-wider text-slate-400 uppercase">Feinjustierung (Offset)</h4>
-                        <span id="offset-label" class="text-xs font-bold text-emerald-400 font-mono">+100.0 dB</span>
-                    </div>
-                    <input type="range" id="offset-slider" min="30" max="150" step="0.5" value="100" class="w-full accent-emerald-500 h-2 bg-slate-950 rounded-lg appearance-none cursor-pointer">
-                    <p class="text-[10px] text-slate-500 leading-tight">
-                        Erhöhe oder verringere den Offset manuell, um die dB-Anzeige an die Umgebungsrealität anzupassen.
-                    </p>
-                </div>
-
-                <!-- Reaktionsgeschwindigkeit -->
-                <div class="space-y-3">
-                    <h4 class="text-xs font-semibold tracking-wider text-slate-400 uppercase">Dämpfung (Damping)</h4>
-                    <select id="damping-select" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs font-semibold text-slate-300 focus:outline-none focus:border-emerald-500">
-                        <option value="0.95">Träge (Sehr ruhige Werte)</option>
-                        <option value="0.85" selected>Standard (Menschlicher Trägheit nachempfunden)</option>
-                        <option value="0.60">Direkt (Schnelle Spitzenwertreaktion)</option>
-                    </select>
-                </div>
-            </div>
-
-            <!-- Sender-Einstellungs-Panel (Nur sichtbar wenn Sender aktiv) -->
-            <div id="sender-settings-panel" class="hidden space-y-4">
-                <p class="text-xs text-slate-400 bg-slate-950/60 p-3 rounded-xl border border-slate-800/60 leading-relaxed">
-                    Solltest du keinen Ton hören, stelle sicher, dass die Medienlautstärke deines Handys laut gedreht ist und der Stummschalter deaktiviert ist.
-                </p>
-            </div>
+    <!-- CUSTOM NOTIFICATION BANNER -->
+    <div id="notification-banner" class="fixed top-20 left-1/2 -translate-x-1/2 w-[90%] max-w-md p-4 rounded-xl bg-slate-900 border border-white/10 shadow-2xl flex items-start space-x-3 transform -translate-y-32 opacity-0 transition-all duration-300 z-50">
+        <div class="p-1 rounded bg-slate-800" id="notification-icon-wrapper">
+            <i data-lucide="info" class="w-5 h-5 text-emerald-400" id="notification-icon"></i>
         </div>
-
-        <div class="p-6 bg-slate-950 border-t border-slate-800 text-[10px] text-slate-500 text-center">
-            AcousticMeter v1.2 &bull; Entwickelt für informelle Näherungsmessungen. Keine rechtliche Relevanz.
+        <div class="flex-1">
+            <h4 id="notification-title" class="font-bold text-sm">Hinweis</h4>
+            <p id="notification-message" class="text-xs text-slate-400 mt-1">Nachricht wird geladen...</p>
         </div>
+        <button id="notification-close" class="text-slate-500 hover:text-slate-300">
+            <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
     </div>
 
-    <!-- FOOTER -->
-    <footer class="w-full py-4 text-center text-[11px] text-slate-500 z-10 bg-slate-900/40 border-t border-slate-800/30">
-        Nutzung des Mikrofons ausschließlich lokal im Web-Sandbox-Sicherheitskontext. Keine Datenerfassung.
-    </footer>
-
-    <!-- LOGIK & AUDIO-STEUERUNG -->
+    <!-- AUDIO SPEKTROMETER & MONSTER ENGINE -->
     <script>
-        // --- Globale App-Zustände ---
-        let appState = {
-            role: 'receiver',             // 'receiver' oder 'sender'
-            isMeasuring: false,           // Läuft das Mikrofon?
-            isPlayingTone: false,         // Läuft der Testton?
-            offset: 100.0,                // Logarithmischer Additionswert zur Kalibrierung
-            targetDb: 70.0,               // Standard-Referenzpegel für den Testton
-            damping: 0.85,                // Smoothing-Koeffizient
-            currentDb: 0,
-            smoothDb: 30,                 // Gedämpfter Wert für die Anzeige
-            history: Array(150).fill(30)  // Messwerte für Diagramm
+        // --- Zustand ---
+        const config = {
+            totalMonsters: 30,
+            minDb: 35, // Ab hier fangen Monster an zu platzen
+            cooldownMs: 15000 // 15 Sekunden globale Ruhephase vor Reaktivierung
+        };
+
+        const state = {
+            role: 'receiver', // 'receiver' oder 'sender'
+            isMeasuring: false,
+            isPlayingTone: false,
+            offset: 100.0,
+            damping: 0.85,
+            smoothDb: 30,
+            targetDb: 70.0,
+            criticalDb: 75.0, // Standardmäßiger kritischer Grenzwert (Lärmgrenze)
+            monsters: [],
+            lastLoudTime: 0 // Globaler Zeitstempel des letzten Lärmereignisses
         };
 
         // --- Audio Context Variablen ---
@@ -322,50 +404,40 @@
         let mediaStream = null;
         let analyser = null;
         let sourceNode = null;
-        let audioProcessorId = null;
+        let biquadFilter = null; // Störgeräusch-Filter
+        let animationFrameId = null;
+        const timeBuffer = new Float32Array(512);
 
         // --- Sender Audio Variablen ---
         let senderAudioContext = null;
         let oscillator = null;
         let gainNode = null;
 
-        // --- Lokalen Speicher auslesen ---
-        const savedOffset = localStorage.getItem('db_offset');
-        if (savedOffset !== null) {
-            appState.offset = parseFloat(savedOffset);
-        }
-
         // --- DOM Elements ---
+        const startOverlay = document.getElementById('start-overlay');
+        const startBtn = document.getElementById('start-btn');
+        const gameArea = document.getElementById('game-area');
+        const senderView = document.getElementById('sender-view');
+        const dbDisplay = document.getElementById('db-display');
+        const cooldownDisplay = document.getElementById('cooldown-display');
+        const pulseDot = document.getElementById('pulse-dot');
+        const statusLed = document.getElementById('status-led');
+        const roleBadge = document.getElementById('role-badge');
+        
+        // Menü & Sidebar Elements
         const menuToggle = document.getElementById('menu-toggle');
         const menuClose = document.getElementById('menu-close');
         const sidebar = document.getElementById('sidebar');
         const setReceiverBtn = document.getElementById('set-receiver-btn');
         const setSenderBtn = document.getElementById('set-sender-btn');
-        const receiverView = document.getElementById('receiver-view');
-        const senderView = document.getElementById('sender-view');
         const receiverSettingsPanel = document.getElementById('receiver-settings-panel');
-        const senderSettingsPanel = document.getElementById('sender-settings-panel');
-        const roleBadge = document.getElementById('role-badge');
-        const statusLed = document.getElementById('status-led');
-        const micToggleBtn = document.getElementById('mic-toggle-btn');
-        const micIcon = document.getElementById('mic-icon');
-        const dbValueEl = document.getElementById('db-value');
-        const dbDescEl = document.getElementById('db-desc');
-        const dbCircle = document.getElementById('db-circle');
-        const volumeBar = document.getElementById('volume-bar');
-        const historyCanvas = document.getElementById('history-chart');
-        const canvasCtx = historyCanvas.getContext('2d');
         const offsetSlider = document.getElementById('offset-slider');
         const offsetLabel = document.getElementById('offset-label');
         const dampingSelect = document.getElementById('damping-select');
-        const toneToggleBtn = document.getElementById('tone-toggle-btn');
-        const toneBtnInner = document.getElementById('tone-btn-inner');
-        const toneIcon = document.getElementById('tone-icon');
-        const toneBtnText = document.getElementById('tone-btn-text');
-        const freqSlider = document.getElementById('freq-slider');
-        const freqLabel = document.getElementById('freq-label');
-        const volumeSlider = document.getElementById('volume-slider');
-        const volumeLabel = document.getElementById('volume-label');
+        const criticalSlider = document.getElementById('critical-slider');
+        const criticalLabel = document.getElementById('critical-label');
+
+        // Modal Elements
         const openCalModalBtn = document.getElementById('open-cal-modal-btn');
         const closeCalModalBtn = document.getElementById('close-modal-btn');
         const calModal = document.getElementById('calibration-modal');
@@ -378,6 +450,16 @@
         const calSuccessDone = document.getElementById('cal-success-done');
         const targetDbInput = document.getElementById('target-db-input');
 
+        // Sender Elements
+        const toneToggleBtn = document.getElementById('tone-toggle-btn');
+        const toneBtnInner = document.getElementById('tone-btn-inner');
+        const toneIcon = document.getElementById('tone-icon');
+        const toneBtnText = document.getElementById('tone-btn-text');
+        const freqSlider = document.getElementById('freq-slider');
+        const freqLabel = document.getElementById('freq-label');
+        const volumeSlider = document.getElementById('volume-slider');
+        const volumeLabel = document.getElementById('volume-label');
+
         // Notification Elements
         const notificationBanner = document.getElementById('notification-banner');
         const notificationTitle = document.getElementById('notification-title');
@@ -386,24 +468,28 @@
         const notificationIcon = document.getElementById('notification-icon');
         const notificationClose = document.getElementById('notification-close');
 
-        // --- Lucide Icons Initialisieren ---
+        // Initialisiere Lucide Icons
         lucide.createIcons();
 
-        // Canvas anpassen für responsive Schärfe
-        function resizeCanvas() {
-            const rect = historyCanvas.getBoundingClientRect();
-            historyCanvas.width = rect.width * window.devicePixelRatio;
-            historyCanvas.height = rect.height * window.devicePixelRatio;
+        // Lokalen Cache für Kalibrierwert laden
+        const cachedOffset = localStorage.getItem('fluester_offset');
+        if (cachedOffset !== null) {
+            state.offset = parseFloat(cachedOffset);
         }
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
+        updateOffsetUI(state.offset);
 
-        // --- Custom Banner Utility (Kein window.alert!) ---
+        // Lokalen Cache für Lärmgrenze laden
+        const cachedCritical = localStorage.getItem('fluester_critical');
+        if (cachedCritical !== null) {
+            state.criticalDb = parseFloat(cachedCritical);
+        }
+        updateCriticalUI(state.criticalDb);
+
+        // Toast Notifications (Verhindert Browser-Alerts)
         function showNotification(title, message, type = 'info') {
             notificationTitle.innerText = title;
             notificationMessage.innerText = message;
             
-            // Icon & Farbpalette anpassen
             if (type === 'error') {
                 notificationIconWrapper.className = 'p-1 rounded bg-rose-950 border border-rose-800/40';
                 notificationIcon.setAttribute('data-lucide', 'alert-triangle');
@@ -419,14 +505,10 @@
             }
             lucide.createIcons();
 
-            // Slide in Animation
             notificationBanner.classList.remove('-translate-y-32', 'opacity-0');
             notificationBanner.classList.add('translate-y-0', 'opacity-100');
 
-            // Automatischer Timeout
-            setTimeout(() => {
-                closeNotification();
-            }, 6000);
+            setTimeout(closeNotification, 6000);
         }
 
         function closeNotification() {
@@ -435,7 +517,7 @@
         }
         notificationClose.addEventListener('click', closeNotification);
 
-        // --- Sidebar Menu Steuerung ---
+        // --- Sidebar & Menü Steuerung ---
         menuToggle.addEventListener('click', () => {
             sidebar.classList.remove('translate-x-full');
         });
@@ -443,72 +525,190 @@
             sidebar.classList.add('translate-x-full');
         });
 
-        // --- Rollenwechsel (Sender / Empfänger) ---
-        setReceiverBtn.addEventListener('click', () => {
-            switchRole('receiver');
-        });
-        setSenderBtn.addEventListener('click', () => {
-            switchRole('sender');
-        });
-
-        function switchRole(role) {
-            appState.role = role;
-            if (role === 'receiver') {
-                // UI Toggle
-                setReceiverBtn.className = "py-2 text-xs font-bold rounded-lg transition-colors bg-emerald-500 text-slate-950";
-                setSenderBtn.className = "py-2 text-xs font-bold rounded-lg transition-colors text-slate-400 hover:text-slate-100";
-                receiverView.classList.remove('hidden');
-                senderView.classList.add('hidden');
-                receiverSettingsPanel.classList.remove('hidden');
-                senderSettingsPanel.classList.add('hidden');
-                roleBadge.innerText = "Modus: Empfänger";
-                roleBadge.className = "px-3 py-1 text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full";
-                statusLed.className = appState.isMeasuring ? "w-3 h-3 rounded-full bg-emerald-500 animate-pulse" : "w-3 h-3 rounded-full bg-slate-700";
-
-                // Audio stop (Sender)
-                stopTestTone();
-            } else {
-                // UI Toggle
-                setSenderBtn.className = "py-2 text-xs font-bold rounded-lg transition-colors bg-rose-500 text-slate-950";
-                setReceiverBtn.className = "py-2 text-xs font-bold rounded-lg transition-colors text-slate-400 hover:text-slate-100";
-                senderView.classList.remove('hidden');
-                receiverView.classList.add('hidden');
-                senderSettingsPanel.classList.remove('hidden');
-                receiverSettingsPanel.classList.add('hidden');
-                roleBadge.innerText = "Modus: Sender";
-                roleBadge.className = "px-3 py-1 text-xs font-semibold bg-rose-500/20 text-rose-300 border border-rose-500/30 rounded-full";
-                statusLed.className = appState.isPlayingTone ? "w-3 h-3 rounded-full bg-rose-500 animate-pulse" : "w-3 h-3 rounded-full bg-slate-700";
-
-                // Audio stop (Receiver)
-                stopMeasuring();
-            }
-            sidebar.classList.add('translate-x-full');
-        }
-
-        // --- Offset Initialisierung ---
+        // Offset UI aktualisieren
         function updateOffsetUI(val) {
-            appState.offset = parseFloat(val);
+            state.offset = parseFloat(val);
             offsetSlider.value = val;
             offsetLabel.innerText = `+${parseFloat(val).toFixed(1)} dB`;
-            localStorage.setItem('db_offset', val);
+            localStorage.setItem('fluester_offset', val);
         }
-        offsetSlider.value = appState.offset;
-        updateOffsetUI(appState.offset);
 
         offsetSlider.addEventListener('input', (e) => {
             updateOffsetUI(e.target.value);
         });
 
-        dampingSelect.addEventListener('change', (e) => {
-            appState.damping = parseFloat(e.target.value);
+        // Lärm-Limit UI aktualisieren & Empfindlichkeit der Monster verschieben
+        function updateCriticalUI(val) {
+            state.criticalDb = parseFloat(val);
+            criticalSlider.value = val;
+            criticalLabel.innerText = `${parseFloat(val).toFixed(0)} dB`;
+            localStorage.setItem('fluester_critical', val);
+            
+            // Neue Schwellenwerte für bestehende Monster im Laufbetrieb berechnen
+            state.monsters.forEach((m, idx) => {
+                m.threshold = config.minDb + (idx / config.totalMonsters) * (state.criticalDb - config.minDb);
+            });
+        }
+
+        criticalSlider.addEventListener('input', (e) => {
+            updateCriticalUI(e.target.value);
         });
 
-        // --- EMPFÄNGER: Audio-Schnittstelle & Messung ---
-        async function startMeasuring() {
-            if (appState.isMeasuring) return;
+        dampingSelect.addEventListener('change', (e) => {
+            state.damping = parseFloat(e.target.value);
+        });
+
+        // --- Rollenwechsel (Sender/Empfänger) ---
+        setReceiverBtn.addEventListener('click', () => switchRole('receiver'));
+        setSenderBtn.addEventListener('click', () => switchRole('sender'));
+
+        function switchRole(role) {
+            state.role = role;
+            sidebar.classList.add('translate-x-full');
+
+            if (role === 'receiver') {
+                setReceiverBtn.className = "py-2 text-xs font-bold rounded-lg transition-colors bg-emerald-500 text-slate-950";
+                setSenderBtn.className = "py-2 text-xs font-bold rounded-lg transition-colors text-slate-400 hover:text-slate-100";
+                roleBadge.innerText = "Empfänger";
+                
+                senderView.classList.add('hidden');
+                gameArea.classList.remove('hidden');
+                receiverSettingsPanel.classList.remove('hidden');
+
+                stopTestTone();
+                if (!state.isMeasuring) startAudio();
+            } else {
+                setSenderBtn.className = "py-2 text-xs font-bold rounded-lg transition-colors bg-rose-500 text-slate-950";
+                setReceiverBtn.className = "py-2 text-xs font-bold rounded-lg transition-colors text-slate-400 hover:text-slate-100";
+                roleBadge.innerText = "Sender";
+                
+                gameArea.classList.add('hidden');
+                senderView.classList.remove('hidden');
+                receiverSettingsPanel.classList.add('hidden');
+
+                stopAudio();
+                // Setze Hintergrundfarbe im Sendermodus fest auf dunkles Schiefer
+                document.body.style.backgroundColor = 'rgb(15, 23, 42)';
+            }
+        }
+
+        // --- START GAME BUTTON ---
+        startBtn.addEventListener('click', () => {
+            startOverlay.classList.add('opacity-0', 'pointer-events-none');
+            setTimeout(() => {
+                startOverlay.remove();
+            }, 500);
+            initGame();
+        });
+
+        // --- Monster-Generation ---
+        function initGame() {
+            generateMonsters();
+            startAudio();
+        }
+
+        const MONSTER_COLORS = [
+            'from-pink-500 to-rose-600 border-pink-400/40',
+            'from-emerald-400 to-teal-600 border-emerald-300/40',
+            'from-indigo-500 to-violet-600 border-indigo-400/40',
+            'from-amber-400 to-orange-500 border-amber-300/40',
+            'from-sky-400 to-blue-600 border-sky-300/40',
+            'from-fuchsia-500 to-purple-700 border-fuchsia-400/40',
+            'from-cyan-400 to-teal-500 border-cyan-300/40',
+            'from-lime-400 to-emerald-600 border-lime-300/40'
+        ];
+
+        function generateMonsters() {
+            gameArea.innerHTML = '';
+            state.monsters = [];
+
+            const minDistancePercent = 11; // Mindestabstand in Prozent zur Überlappungsvermeidung
+
+            for (let i = 0; i < config.totalMonsters; i++) {
+                let randomX, randomY;
+                let attempts = 0;
+                let tooClose;
+
+                do {
+                    randomX = 6 + Math.random() * 82; // Sicherheitsmarge am Rand
+                    randomY = 18 + Math.random() * 66; // Erhöhter Abstand wegen der oberen Header-Leiste
+                    attempts++;
+
+                    tooClose = state.monsters.some(m => {
+                        const dx = m.x - randomX;
+                        const dy = m.y - randomY;
+                        return Math.sqrt(dx * dx + dy * dy) < minDistancePercent;
+                    });
+                } while (tooClose && attempts < 100);
+
+                const size = Math.floor(Math.random() * 35) + 55;
+                const colorClass = MONSTER_COLORS[Math.floor(Math.random() * MONSTER_COLORS.length)];
+                
+                // Lärm-Empfindlichkeit (Threshold) dynamisch skalieren anhand der Lärmgrenze
+                const threshold = config.minDb + (i / config.totalMonsters) * (state.criticalDb - config.minDb);
+                const eyeSizeFactor = 0.6 + Math.random() * 0.8; // Individuelle Augen-Persönlichkeit
+
+                const monsterEl = document.createElement('div');
+                monsterEl.className = 'absolute rounded-full shadow-lg border-2 flex items-center justify-center monster-float bg-gradient-to-br ' + colorClass;
+                monsterEl.style.width = `${size}px`;
+                monsterEl.style.height = `${size}px`;
+                monsterEl.style.left = `${randomX}%`;
+                monsterEl.style.top = `${randomY}%`;
+
+                // CSS Floating-Variablen asynchron zuweisen
+                monsterEl.style.setProperty('--float-duration', `${3 + Math.random() * 3}s`);
+                monsterEl.style.setProperty('--float-delay', `${-Math.random() * 5}s`);
+                monsterEl.style.setProperty('--float-distance', `${-(6 + Math.random() * 8)}px`);
+                monsterEl.style.setProperty('--float-rotate', `${(Math.random() - 0.5) * 6}deg`);
+
+                // Augenpaare mit individuellen Größen hinzufügen
+                const leftEye = createEye(eyeSizeFactor);
+                const rightEye = createEye(eyeSizeFactor);
+                monsterEl.appendChild(leftEye);
+                monsterEl.appendChild(rightEye);
+
+                gameArea.appendChild(monsterEl);
+
+                state.monsters.push({
+                    el: monsterEl,
+                    threshold: threshold,
+                    isPopped: false,
+                    x: randomX,
+                    y: randomY,
+                    size: size,
+                    color: colorClass
+                });
+            }
+
+            state.monsters.sort(() => Math.random() - 0.5);
+        }
+
+        function createEye(sizeFactor) {
+            const eye = document.createElement('div');
+            const eyeWidth = 12 * sizeFactor;
+            const eyeHeight = 16 * sizeFactor;
+            
+            eye.className = 'bg-white rounded-full flex items-center justify-center mx-0.5 shadow-inner eye-blink';
+            eye.style.width = `${eyeWidth}px`;
+            eye.style.height = `${eyeHeight}px`;
+            eye.style.setProperty('--blink-duration', `${4 + Math.random() * 5}s`);
+            eye.style.setProperty('--blink-delay', `${Math.random() * 10}s`);
+
+            const pupil = document.createElement('div');
+            const pupilSize = 6 * sizeFactor;
+            pupil.className = 'bg-black rounded-full';
+            pupil.style.width = `${pupilSize}px`;
+            pupil.style.height = `${pupilSize}px`;
+            eye.appendChild(pupil);
+
+            return eye;
+        }
+
+        // --- Audio Erfassung & Filter-Pipeline ---
+        async function startAudio() {
+            if (state.role !== 'receiver' || state.isMeasuring) return;
 
             try {
-                // Erforderliche Filter deaktivieren für realistischere Messung
                 const constraints = {
                     audio: {
                         echoCancellation: false,
@@ -519,42 +719,40 @@
                 mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
                 
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                
-                // AudioContext aufwecken, falls Browser ihn schlafen legt
                 if (audioContext.state === 'suspended') {
                     await audioContext.resume();
                 }
 
+                // NEU: Bandpass-Filter erstellen, um Stimmen zu isolieren (Brummen dämpfen)
+                biquadFilter = audioContext.createBiquadFilter();
+                biquadFilter.type = 'bandpass';
+                biquadFilter.frequency.value = 1000; // Optimaler Mittelpunkt für menschliche Stimmen
+                biquadFilter.Q.value = 0.6; // Weiche Flankensteilheit (lässt ca. 300Hz bis 3000Hz passieren)
+
                 analyser = audioContext.createAnalyser();
-                analyser.fftSize = 1024; // Ausgewogene zeitliche Auflösung
+                analyser.fftSize = 512;
 
                 sourceNode = audioContext.createMediaStreamSource(mediaStream);
-                sourceNode.connect(analyser);
-
-                appState.isMeasuring = true;
                 
-                // Pulsierung entfernen, da jetzt aktiv gemessen wird
-                micToggleBtn.className = "w-16 h-16 rounded-full bg-rose-500 hover:bg-rose-400 text-slate-950 flex items-center justify-center transition-transform hover:scale-105 shadow-lg mb-2 focus:outline-none";
-                micIcon.setAttribute('data-lucide', 'mic-off');
-                statusLed.className = "w-3 h-3 rounded-full bg-emerald-500 animate-pulse";
-                lucide.createIcons();
+                // Routing: Mikrofon -> Filter -> Analyser
+                sourceNode.connect(biquadFilter);
+                biquadFilter.connect(analyser);
 
-                processAudio();
+                state.isMeasuring = true;
+                statusLed.className = "w-3 h-3 rounded-full bg-emerald-500 animate-pulse";
+                process();
             } catch (err) {
-                console.error("Mikrofon-Zugriff fehlgeschlagen: ", err);
-                showNotification(
-                    "Mikrofon-Zulassung fehlt", 
-                    "Es konnte kein Zugriff auf das Mikrofon etabliert werden. Bitte prüfe deine Browsereinstellungen.", 
-                    "error"
-                );
+                console.error("Audiozugriff verweigert:", err);
+                dbDisplay.innerText = "Fehler: Mikrofon blockiert";
+                statusLed.className = "w-3 h-3 rounded-full bg-rose-500";
             }
         }
 
-        function stopMeasuring() {
-            if (!appState.isMeasuring) return;
+        function stopAudio() {
+            if (!state.isMeasuring) return;
 
-            appState.isMeasuring = false;
-            cancelAnimationFrame(audioProcessorId);
+            state.isMeasuring = false;
+            cancelAnimationFrame(animationFrameId);
 
             if (mediaStream) {
                 mediaStream.getTracks().forEach(track => track.stop());
@@ -562,194 +760,197 @@
             if (audioContext && audioContext.state !== 'closed') {
                 audioContext.close();
             }
-
-            // Pulsierung wieder hinzufügen, um Aktivierung anzudeuten
-            micToggleBtn.className = "w-16 h-16 rounded-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 flex items-center justify-center transition-transform hover:scale-105 shadow-lg mb-2 focus:outline-none pulse-emerald-active";
-            micIcon.setAttribute('data-lucide', 'mic');
             statusLed.className = "w-3 h-3 rounded-full bg-slate-700";
-            dbValueEl.innerText = "0.0";
-            dbDescEl.innerText = "Klicke auf das Mikrofon zum Starten";
-            dbCircle.style.transform = "scale(1)";
-            volumeBar.style.width = "0%";
-            lucide.createIcons();
-            
-            // Sanftes Zurücksetzen des Hintergrunds
-            document.body.style.backgroundColor = 'rgb(3, 7, 18)';
         }
 
-        micToggleBtn.addEventListener('click', () => {
-            if (appState.isMeasuring) {
-                stopMeasuring();
-            } else {
-                startMeasuring();
-            }
-        });
-
-        // --- Mathematische Verarbeitung & Visualisierung ---
-        const timeBuffer = new Float32Array(1024);
+        // --- Spektrogramm Verarbeitungs-Schleife ---
         let calibrationSamples = [];
         let isCollectingSamples = false;
 
-        function processAudio() {
-            if (!appState.isMeasuring) return;
+        function process() {
+            if (!state.isMeasuring) return;
 
             analyser.getFloatTimeDomainData(timeBuffer);
 
-            // 1. RMS (Root Mean Square) berechnen
+            // RMS Berechnung
             let sumSquare = 0;
             for (let i = 0; i < timeBuffer.length; i++) {
                 sumSquare += timeBuffer[i] * timeBuffer[i];
             }
             let rms = Math.sqrt(sumSquare / timeBuffer.length);
 
-            // 2. Umrechnung in dBFS (dB relativ zum Maximum des digitalen Mikrofons)
+            // Pegelumrechnung
             let dbfs = 20 * Math.log10(rms);
-
-            // Abfangen von Extremwerten und mathematischen Anomalien (Stille = minus unendlich)
             if (dbfs < -120 || isNaN(dbfs) || !isFinite(dbfs)) {
                 dbfs = -120;
             }
 
-            // Für die automatische Kalibrierung Rohdaten mitschreiben
+            // Für die automatische Eichung Daten mitschreiben
             if (isCollectingSamples) {
                 calibrationSamples.push(dbfs);
             }
 
-            // 3. Offset anwenden
-            let rawDb = dbfs + appState.offset;
-            if (rawDb < 0) rawDb = 0; // Untere physikalische Grenze abschneiden
+            let calculatedDb = dbfs + state.offset;
+            if (calculatedDb < 0) calculatedDb = 0;
 
-            // 4. Glättungsfilter anwenden (Gedämpfte Reaktion)
-            appState.smoothDb = (appState.smoothDb * appState.damping) + (rawDb * (1 - appState.damping));
-            appState.currentDb = appState.smoothDb;
+            // Signalfilterung (Smooth)
+            state.smoothDb = (state.smoothDb * state.damping) + (calculatedDb * (1 - state.damping));
 
-            // UI Aktualisieren
-            drawRealtimeUI(appState.currentDb);
+            // UI & Spiel-Mechanik ausführen
+            updateGame(state.smoothDb);
 
-            // Historie fortschreiben
-            appState.history.push(appState.currentDb);
-            if (appState.history.length > 150) {
-                appState.history.shift();
+            animationFrameId = requestAnimationFrame(process);
+        }
+
+        // --- Spielupdate & Platz-Effekte ---
+        function updateGame(db) {
+            const now = Date.now();
+
+            // 1. Textanzeige aktualisieren
+            dbDisplay.innerText = `${db.toFixed(1)} dB`;
+
+            // 2. Wenn es laut ist, setzen wir die Sperre für alle geplatzten Monster zurück
+            if (db >= config.minDb) {
+                state.lastLoudTime = now;
             }
-            drawHistoryChart();
 
-            audioProcessorId = requestAnimationFrame(processAudio);
-        }
+            // Prüfung, ob die globale 15-Sekunden-Ruhephase erreicht ist
+            const isGlobalQuiet = (now - state.lastLoudTime) >= config.cooldownMs;
+            
+            // Vorhandensein von geplatzten Monstern prüfen für HUD-Anzeige
+            const anyMonsterPopped = state.monsters.some(m => m.isPopped);
 
-        // --- Dynamische Farbinformationen extrahieren ---
-        function getAmbientColor(db) {
-            // Skalierung: 30 dB (sehr leise) bis 90 dB (sehr laut)
-            const minDb = 30;
-            const maxDb = 90;
-            let percent = (db - minDb) / (maxDb - minDb);
-            percent = Math.max(0, Math.min(1, percent)); // Wert beschränken auf [0, 1]
+            // Countdown im HUD visualisieren
+            if (anyMonsterPopped && !isGlobalQuiet && state.lastLoudTime > 0) {
+                const remainingSec = Math.max(0, Math.ceil((config.cooldownMs - (now - state.lastLoudTime)) / 1000));
+                cooldownDisplay.innerText = `Sperre: ${remainingSec}s`;
+                cooldownDisplay.classList.remove('hidden');
+            } else {
+                cooldownDisplay.classList.add('hidden');
+            }
 
-            // Übergang HSL: Grün (140) -> Gelb (60) -> Rot (0)
-            const hue = 140 - (percent * 140);
-            const saturation = 80 + (percent * 20); // Höhere Sättigung bei Lautstärke
-            const lightness = 6 + (percent * 12);   // Geringe Helligkeit für edle, dezente Hintergrund-Ausleuchtung
+            // 3. Status-LED blinken lassen (Frequenz anpassen je nach Lärm)
+            const ledSpeed = db > (state.criticalDb - 15) ? '0.15s' : '1s';
+            pulseDot.style.animationDuration = ledSpeed;
+            if (db > (state.criticalDb - 15)) {
+                pulseDot.className = "w-2 h-2 rounded-full bg-rose-500 animate-ping";
+            } else {
+                pulseDot.className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
+            }
 
-            return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
-        }
-
-        // --- Beschreibung der Akustischen Situation ---
-        function getSoundDescription(db) {
-            if (db < 35) return "Extrem leise (Flüstern)";
-            if (db < 50) return "Ruhige Wohngegend";
-            if (db < 65) return "Normales Gespräch";
-            if (db < 75) return "Laufeffekt / Büro";
-            if (db < 85) return "Verkehrslärm / Laut";
-            return "Gehörgefährdend!";
-        }
-
-        // --- Echtzeit UI Updates ---
-        function drawRealtimeUI(db) {
-            // Textwert
-            dbValueEl.innerText = db.toFixed(1);
-            dbDescEl.innerText = getSoundDescription(db);
-
-            // Umgebungsfarbe anpassen (Fluid Transition)
-            const ambientColor = getAmbientColor(db);
+            // 4. Monochromer Hintergrund (Flüssiger Übergang von Schwarz nach Weiß)
+            const ambientColor = getMonochromeColor(db);
             document.body.style.backgroundColor = ambientColor;
 
-            // Kreisanzeige skalieren und runder Puls
-            const scaleFactor = 1 + (Math.min(db, 100) / 600);
-            dbCircle.style.transform = `scale(${scaleFactor})`;
+            // 5. Monster steuern (Platzen oder nach globalem Cooldown wiederauferstehen)
+            state.monsters.forEach(m => {
+                const shouldBePopped = db >= m.threshold;
 
-            // Pegelleiste
-            const progressPercent = Math.min(100, Math.max(0, (db / 120) * 100));
-            volumeBar.style.width = `${progressPercent}%`;
+                if (shouldBePopped && !m.isPopped) {
+                    m.isPopped = true;
+                    m.el.classList.add('popped'); // Schnelles, wuchtiges Ausblenden
+                    
+                    triggerPopParticles(m);
+                    triggerShockwave(m);
+                } else if (!shouldBePopped && m.isPopped) {
+                    if (isGlobalQuiet) {
+                        m.isPopped = false;
+                        m.el.classList.remove('popped'); // Weich zurückfedern
+                    }
+                }
+            });
         }
 
-        // --- Verlaufschart zeichnen ---
-        function drawHistoryChart() {
-            const width = historyCanvas.width;
-            const height = historyCanvas.height;
-            canvasCtx.clearRect(0, 0, width, height);
+        // --- Monochromer Farbwertgenerator ---
+        function getMonochromeColor(db) {
+            const min = 35; // Absolut still -> Schwarz
+            const max = state.criticalDb; // Ab kritischem dB-Limit -> Weiß
+            let percent = (db - min) / (max - min);
+            percent = Math.max(0, Math.min(1, percent));
 
-            if (appState.history.length === 0) return;
+            const brightness = Math.round(percent * 255);
+            return `rgb(${brightness}, ${brightness}, ${brightness})`;
+        }
 
-            canvasCtx.beginPath();
-            canvasCtx.lineWidth = 3 * window.devicePixelRatio;
-            canvasCtx.lineCap = 'round';
-            canvasCtx.lineJoin = 'round';
+        // --- Shockwave Druckwellen-Ring ---
+        function triggerShockwave(monster) {
+            const rect = monster.el.getBoundingClientRect();
+            const centerX = rect.left + (rect.width / 2);
+            const centerY = rect.top + (rect.height / 2);
 
-            const step = width / (appState.history.length - 1);
+            const wave = document.createElement('div');
+            wave.className = `shockwave border-white/40 border-8`;
+            wave.style.left = `${centerX}px`;
+            wave.style.top = `${centerY}px`;
+            wave.style.width = `${monster.size}px`;
+            wave.style.height = `${monster.size}px`;
+
+            document.body.appendChild(wave);
+
+            setTimeout(() => wave.remove(), 450);
+        }
+
+        // --- Wuchtiger Partikel-Explosionseffekt ---
+        function triggerPopParticles(monster) {
+            const particleCount = 18;
+            const colors = ['bg-pink-400', 'bg-emerald-400', 'bg-amber-400', 'bg-blue-400', 'bg-purple-400', 'bg-white', 'bg-rose-400', 'bg-teal-300'];
             
-            for (let i = 0; i < appState.history.length; i++) {
-                const db = appState.history[i];
-                // Skalierung: 0 dB bis 100 dB für Diagrammhöhe
-                const yPercent = 1 - (Math.min(db, 100) / 100);
-                const x = i * step;
-                const y = yPercent * (height - 10) + 5; // Abstand halten
+            const rect = monster.el.getBoundingClientRect();
+            const centerX = rect.left + (rect.width / 2);
+            const centerY = rect.top + (rect.height / 2);
 
-                if (i === 0) {
-                    canvasCtx.moveTo(x, y);
-                } else {
-                    canvasCtx.lineTo(x, y);
-                }
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                const randomColor = colors[Math.floor(Math.random() * colors.length)];
+                
+                particle.className = `pop-particle ${randomColor} shadow-md`;
+                
+                const pSize = Math.random() * 10 + 4;
+                particle.style.width = `${pSize}px`;
+                particle.style.height = `${pSize}px`;
+                particle.style.left = `${centerX}px`;
+                particle.style.top = `${centerY}px`;
+
+                const angle = Math.random() * Math.PI * 2;
+                const distance = Math.random() * 110 + 30;
+                const tx = Math.cos(angle) * distance;
+                const ty = Math.sin(angle) * distance;
+
+                particle.style.setProperty('--tx', `${tx}px`);
+                particle.style.setProperty('--ty', `${ty}px`);
+
+                document.body.appendChild(particle);
+
+                setTimeout(() => particle.remove(), 700);
             }
-
-            // Diagramm-Farbverlauf
-            const gradient = canvasCtx.createLinearGradient(0, 0, 0, height);
-            gradient.addColorStop(0, '#f43f5e'); // Rose
-            gradient.addColorStop(0.5, '#f59e0b'); // Amber
-            gradient.addColorStop(1, '#10b981'); // Emerald
-            
-            canvasCtx.strokeStyle = gradient;
-            canvasCtx.stroke();
         }
 
         // --- SENDER: Frequenzgenerator & Testton ---
         function startTestTone() {
-            if (appState.isPlayingTone) return;
+            if (state.isPlayingTone) return;
 
             try {
                 senderAudioContext = new (window.AudioContext || window.webkitAudioContext)();
                 oscillator = senderAudioContext.createOscillator();
                 gainNode = senderAudioContext.createGain();
 
-                // Frequenz & Lautstärke einstellen
                 oscillator.type = 'sine';
                 oscillator.frequency.value = parseFloat(freqSlider.value);
                 
                 const volumePercent = parseFloat(volumeSlider.value) / 100;
                 gainNode.gain.value = volumePercent;
 
-                // Verbindungen
                 oscillator.connect(gainNode);
                 gainNode.connect(senderAudioContext.destination);
 
                 oscillator.start();
-                appState.isPlayingTone = true;
+                state.isPlayingTone = true;
 
-                // UI Updates
-                toneBtnInner.className = "w-48 h-48 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white flex flex-col items-center justify-center shadow-lg transition-colors pulse-active";
+                toneBtnInner.className = "w-36 h-36 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white flex flex-col items-center justify-center shadow-lg transition-colors pulse-active";
                 toneIcon.setAttribute('data-lucide', 'square');
                 toneBtnText.innerText = "TON STOPPEN";
                 statusLed.className = "w-3 h-3 rounded-full bg-rose-500 animate-pulse";
                 lucide.createIcons();
-
             } catch (err) {
                 console.error("Testton-Fehler: ", err);
                 showNotification("Audio-Fehler", "Der Signalgenerator konnte nicht gestartet werden.", "error");
@@ -757,7 +958,7 @@
         }
 
         function stopTestTone() {
-            if (!appState.isPlayingTone) return;
+            if (!state.isPlayingTone) return;
 
             if (oscillator) {
                 oscillator.stop();
@@ -770,10 +971,9 @@
                 senderAudioContext.close();
             }
 
-            appState.isPlayingTone = false;
+            state.isPlayingTone = false;
 
-            // UI Reset
-            toneBtnInner.className = "w-48 h-48 rounded-full bg-rose-600 hover:bg-rose-500 text-white flex flex-col items-center justify-center shadow-lg transition-colors";
+            toneBtnInner.className = "w-36 h-36 rounded-full bg-rose-600 hover:bg-rose-500 text-white flex flex-col items-center justify-center shadow-lg transition-colors";
             toneIcon.setAttribute('data-lucide', 'volume-2');
             toneBtnText.innerText = "TON STARTEN";
             statusLed.className = "w-3 h-3 rounded-full bg-slate-700";
@@ -781,7 +981,7 @@
         }
 
         toneToggleBtn.addEventListener('click', () => {
-            if (appState.isPlayingTone) {
+            if (state.isPlayingTone) {
                 stopTestTone();
             } else {
                 startTestTone();
@@ -791,7 +991,7 @@
         freqSlider.addEventListener('input', (e) => {
             const freq = e.target.value;
             freqLabel.innerText = `${freq} Hz`;
-            if (oscillator && appState.isPlayingTone) {
+            if (oscillator && state.isPlayingTone) {
                 oscillator.frequency.value = parseFloat(freq);
             }
         });
@@ -799,20 +999,16 @@
         volumeSlider.addEventListener('input', (e) => {
             const volume = e.target.value;
             volumeLabel.innerText = `${volume}%`;
-            if (gainNode && appState.isPlayingTone) {
+            if (gainNode && state.isPlayingTone) {
                 gainNode.gain.value = parseFloat(volume) / 100;
             }
         });
 
-
         // --- KALIBRIERUNGS-MODAL LOGIK ---
         openCalModalBtn.addEventListener('click', () => {
             calModal.classList.remove('hidden');
-            setTimeout(() => {
-                calModal.classList.remove('opacity-0');
-            }, 10);
+            setTimeout(() => calModal.classList.remove('opacity-0'), 10);
             
-            // Reset modal steps
             calStep1.classList.remove('hidden');
             calStep2.classList.add('hidden');
             calStep3.classList.add('hidden');
@@ -821,41 +1017,35 @@
 
         function closeModal() {
             calModal.classList.add('opacity-0');
-            setTimeout(() => {
-                calModal.classList.add('hidden');
-            }, 300);
+            setTimeout(() => calModal.classList.add('hidden'), 300);
         }
 
         closeCalModalBtn.addEventListener('click', closeModal);
         calSuccessDone.addEventListener('click', closeModal);
 
         startMeasuringBtn.addEventListener('click', async () => {
-            // Zielwert validieren
             let targetValue = parseFloat(targetDbInput.value);
             if (isNaN(targetValue) || targetValue <= 0 || targetValue > 120) {
                 showNotification("Ungültiger Zielwert", "Bitte gib einen realistischen Wert zwischen 30 und 110 dB an.", "error");
                 return;
             }
-            appState.targetDb = targetValue;
+            state.targetDb = targetValue;
 
-            // Sicherstellen, dass das Mikrofon läuft
-            if (!appState.isMeasuring) {
-                await startMeasuring();
+            if (!state.isMeasuring) {
+                await startAudio();
             }
 
-            if (!appState.isMeasuring) {
+            if (!state.isMeasuring) {
                 showNotification("Mikrofon erforderlich", "Die Kalibrierung benötigt ein aktives Mikrofon.", "error");
                 return;
             }
 
-            // Schritt 2: Messungsanimation einblenden
             calStep1.classList.add('hidden');
             calStep2.classList.remove('hidden');
 
             calibrationSamples = [];
             isCollectingSamples = true;
 
-            // Fortschrittsbalken-Animation (3 Sekunden)
             let duration = 3000;
             let start = null;
             
@@ -884,19 +1074,16 @@
                 return;
             }
 
-            // Durchschnittlichen digitalen Pegel (dBFS) während der 3 Sek ermitteln
             const sumDbfs = calibrationSamples.reduce((a, b) => a + b, 0);
             const avgDbfs = sumDbfs / calibrationSamples.length;
 
-            // Berechnung des neuen Offsets:
-            // Formel: Gemessener_Wert = avgDbfs + neuerOffset => neuerOffset = Zielwert - avgDbfs
-            const calculatedOffset = appState.targetDb - avgDbfs;
+            // Berechnung des neuen Pegel-Offsets
+            const calculatedOffset = state.targetDb - avgDbfs;
 
-            // Plausibilitätsprüfung
             if (calculatedOffset < 10 || calculatedOffset > 180) {
                 showNotification(
                     "Plausibilitäts-Fehler", 
-                    "Die Messung ergab unplausible Werte. Stelle sicher, dass der Testton läuft und das Gerät nah genug ist.", 
+                    "Die Messung ergab unplausible Werte. Stelle sicher, dass der Testton laut genug ist.", 
                     "error"
                 );
                 calStep1.classList.remove('hidden');
@@ -904,15 +1091,13 @@
                 return;
             }
 
-            // Offset speichern und anwenden
             updateOffsetUI(calculatedOffset.toFixed(1));
 
-            // Erfolgsfenster anzeigen
             calStep2.classList.add('hidden');
             calStep3.classList.remove('hidden');
-            calResultText.innerHTML = `Neuer kalibrierter Offset: <strong>+${calculatedOffset.toFixed(1)} dB</strong>.<br>Die aktuelle Audio-Aufnahme wurde auf den Referenzwert angepasst.`;
+            calResultText.innerHTML = `Neuer kalibrierter Offset: <strong>+${calculatedOffset.toFixed(1)} dB</strong>.<br>Die Mikrofon-Empfindlichkeit wurde an die Umgebungsrealität angeglichen.`;
             
-            showNotification("Kalibrierung abgeschlossen", "Offset erfolgreich berechnet und gespeichert.", "success");
+            showNotification("Kalibrierung abgeschlossen", "Eichung war erfolgreich.", "success");
         }
     </script>
 </body>
