@@ -25,6 +25,15 @@
         .pulse-active {
             animation: pulse-glowing 2s infinite;
         }
+        /* Pulsierender Effekt für den inaktiven Mikrofon-Button */
+        @keyframes pulse-emerald {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6); }
+            70% { transform: scale(1.05); box-shadow: 0 0 0 15px rgba(16, 185, 129, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+        .pulse-emerald-active {
+            animation: pulse-emerald 2s infinite;
+        }
     </style>
 </head>
 <body class="h-full text-slate-100 flex flex-col justify-between overflow-hidden bg-slate-950 font-sans">
@@ -32,7 +41,7 @@
     <!-- HEADER -->
     <header class="w-full px-6 py-4 flex items-center justify-between z-10 bg-slate-900/60 backdrop-blur-md border-b border-slate-800/40">
         <div class="flex items-center space-x-2">
-            <div class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse" id="status-led"></div>
+            <div class="w-3 h-3 rounded-full bg-slate-700 animate-pulse" id="status-led"></div>
             <span class="font-bold tracking-wider text-lg">ACOUSTIC<span class="text-emerald-400">METER</span></span>
         </div>
         
@@ -57,8 +66,8 @@
             <div class="relative w-72 h-72 rounded-full border-4 border-slate-800/80 bg-slate-950/40 backdrop-blur-lg flex flex-col items-center justify-center shadow-2xl transition-all duration-300" id="db-circle">
                 <div class="absolute inset-4 rounded-full border border-dashed border-slate-700/50"></div>
                 
-                <!-- Mikrofon-Symbol / Startknopf im Kreis -->
-                <button id="mic-toggle-btn" class="w-16 h-16 rounded-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 flex items-center justify-center transition-transform hover:scale-105 shadow-lg mb-2 focus:outline-none">
+                <!-- Mikrofon-Symbol / Startknopf im Kreis (Pulsiert, wenn inaktiv) -->
+                <button id="mic-toggle-btn" class="w-16 h-16 rounded-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 flex items-center justify-center transition-transform hover:scale-105 shadow-lg mb-2 focus:outline-none pulse-emerald-active">
                     <i data-lucide="mic" class="w-8 h-8" id="mic-icon"></i>
                 </button>
 
@@ -70,7 +79,7 @@
                 
                 <!-- Lautstärkecharakteristik Beschreibung -->
                 <div id="db-desc" class="text-sm font-semibold tracking-wide text-slate-400 mt-2 bg-slate-900/80 px-3 py-1 rounded-full border border-slate-800/60">
-                    Inaktiv
+                    Klicke auf das Mikrofon zum Starten
                 </div>
             </div>
 
@@ -510,6 +519,12 @@
                 mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
                 
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                
+                // AudioContext aufwecken, falls Browser ihn schlafen legt
+                if (audioContext.state === 'suspended') {
+                    await audioContext.resume();
+                }
+
                 analyser = audioContext.createAnalyser();
                 analyser.fftSize = 1024; // Ausgewogene zeitliche Auflösung
 
@@ -517,6 +532,8 @@
                 sourceNode.connect(analyser);
 
                 appState.isMeasuring = true;
+                
+                // Pulsierung entfernen, da jetzt aktiv gemessen wird
                 micToggleBtn.className = "w-16 h-16 rounded-full bg-rose-500 hover:bg-rose-400 text-slate-950 flex items-center justify-center transition-transform hover:scale-105 shadow-lg mb-2 focus:outline-none";
                 micIcon.setAttribute('data-lucide', 'mic-off');
                 statusLed.className = "w-3 h-3 rounded-full bg-emerald-500 animate-pulse";
@@ -546,11 +563,12 @@
                 audioContext.close();
             }
 
-            micToggleBtn.className = "w-16 h-16 rounded-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 flex items-center justify-center transition-transform hover:scale-105 shadow-lg mb-2 focus:outline-none";
+            // Pulsierung wieder hinzufügen, um Aktivierung anzudeuten
+            micToggleBtn.className = "w-16 h-16 rounded-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 flex items-center justify-center transition-transform hover:scale-105 shadow-lg mb-2 focus:outline-none pulse-emerald-active";
             micIcon.setAttribute('data-lucide', 'mic');
             statusLed.className = "w-3 h-3 rounded-full bg-slate-700";
             dbValueEl.innerText = "0.0";
-            dbDescEl.innerText = "Inaktiv";
+            dbDescEl.innerText = "Klicke auf das Mikrofon zum Starten";
             dbCircle.style.transform = "scale(1)";
             volumeBar.style.width = "0%";
             lucide.createIcons();
