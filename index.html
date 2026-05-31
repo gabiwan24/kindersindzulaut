@@ -31,9 +31,9 @@
         
         /* Lebendige, organische Animationen für die Monster */
         @keyframes float-animation {
-            0% { transform: translateY(0px) rotate(0deg); }
-            50% { transform: translateY(var(--float-distance, -10px)) rotate(var(--float-rotate, 3deg)); }
-            100% { transform: translateY(0px) rotate(0deg); }
+            0% { transform: scale(var(--monster-scale, 1)) translateY(0px) rotate(0deg); }
+            50% { transform: scale(var(--monster-scale, 1)) translateY(var(--float-distance, -10px)) rotate(var(--float-rotate, 3deg)); }
+            100% { transform: scale(var(--monster-scale, 1)) translateY(0px) rotate(0deg); }
         }
         
         @keyframes blink-animation {
@@ -44,16 +44,8 @@
         .monster-float {
             animation: float-animation var(--float-duration, 4s) ease-in-out infinite;
             animation-delay: var(--float-delay, 0s);
-            /* Schönes, weiches Einblenden mit elastischem Federeffekt */
-            transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.5s ease;
-        }
-
-        /* Schnelles, wuchtiges Platzen überschreibt die langsame Transition */
-        .monster-float.popped {
-            transition: transform 0.08s cubic-bezier(0.6, -0.28, 0.735, 0.045), opacity 0.08s ease !important;
-            transform: scale(0) !important;
-            opacity: 0 !important;
-            pointer-events: none;
+            /* Sanfter Übergang für die Opazität */
+            transition: opacity 0.5s ease;
         }
 
         .eye-blink {
@@ -233,7 +225,7 @@
 
             <!-- Empfänger-Einstellungs-Panel (Nur sichtbar wenn Empfänger aktiv) -->
             <div id="receiver-settings-panel" class="space-y-5">
-                <!-- NEU: Kritischer Lautstärkewert (Lärm-Alarmgrenze) -->
+                <!-- Kritischer Lautstärkewert (Lärm-Alarmgrenze) -->
                 <div class="space-y-2">
                     <div class="flex justify-between items-center">
                         <h4 class="text-xs font-semibold tracking-wider text-slate-400 uppercase">Kritische Lautstärke (Limit)</h4>
@@ -242,6 +234,18 @@
                     <input type="range" id="critical-slider" min="50" max="95" step="1" value="75" class="w-full accent-rose-500 h-1.5 bg-slate-950 rounded-lg appearance-none cursor-pointer">
                     <p class="text-[10px] text-slate-500 leading-tight">
                         Bestimmt, ab wie viel dB das letzte Monster platzt und der Bildschirm komplett weiß wird.
+                    </p>
+                </div>
+
+                <!-- NEU: Einstellbarer Schwellenwert für das Zurücksetzen der Sperre -->
+                <div class="space-y-2">
+                    <div class="flex justify-between items-center">
+                        <h4 class="text-xs font-semibold tracking-wider text-slate-400 uppercase">Sperre-Reset ab</h4>
+                        <span id="cooldown-reset-label" class="text-xs font-bold text-rose-400 font-mono">50 dB</span>
+                    </div>
+                    <input type="range" id="cooldown-reset-slider" min="30" max="85" step="1" value="50" class="w-full accent-rose-500 h-1.5 bg-slate-950 rounded-lg appearance-none cursor-pointer">
+                    <p class="text-[10px] text-slate-500 leading-tight">
+                        Bestimmt, ab welcher Lautstärke der 15-Sekunden-Sperrtimer von neuem gestartet wird.
                     </p>
                 </div>
 
@@ -289,7 +293,7 @@
         </div>
 
         <div class="p-6 bg-black border-t border-white/5 text-[10px] text-slate-500 text-center">
-            Flüster-Monster v1.6 &bull; Keine rechtliche Relevanz.
+            Flüster-Monster v1.7 &bull; Keine rechtliche Relevanz.
         </div>
     </div>
 
@@ -395,6 +399,7 @@
             smoothDb: 30,
             targetDb: 70.0,
             criticalDb: 75.0, // Standardmäßiger kritischer Grenzwert (Lärmgrenze)
+            cooldownResetDb: 50.0, // Schwellenwert ab dem Lärm den 15s Timer zurücksetzt
             monsters: [],
             lastLoudTime: 0 // Globaler Zeitstempel des letzten Lärmereignisses
         };
@@ -436,6 +441,8 @@
         const dampingSelect = document.getElementById('damping-select');
         const criticalSlider = document.getElementById('critical-slider');
         const criticalLabel = document.getElementById('critical-label');
+        const cooldownResetSlider = document.getElementById('cooldown-reset-slider');
+        const cooldownResetLabel = document.getElementById('cooldown-reset-label');
 
         // Modal Elements
         const openCalModalBtn = document.getElementById('open-cal-modal-btn');
@@ -484,6 +491,13 @@
             state.criticalDb = parseFloat(cachedCritical);
         }
         updateCriticalUI(state.criticalDb);
+
+        // Lokalen Cache für Sperre-Reset-Wert laden
+        const cachedCooldownReset = localStorage.getItem('fluester_cooldown_reset');
+        if (cachedCooldownReset !== null) {
+            state.cooldownResetDb = parseFloat(cachedCooldownReset);
+        }
+        updateCooldownResetUI(state.cooldownResetDb);
 
         // Toast Notifications (Verhindert Browser-Alerts)
         function showNotification(title, message, type = 'info') {
@@ -552,6 +566,18 @@
 
         criticalSlider.addEventListener('input', (e) => {
             updateCriticalUI(e.target.value);
+        });
+
+        // Sperre-Reset Schwellenwert UI aktualisieren
+        function updateCooldownResetUI(val) {
+            state.cooldownResetDb = parseFloat(val);
+            cooldownResetSlider.value = val;
+            cooldownResetLabel.innerText = `${parseFloat(val).toFixed(0)} dB`;
+            localStorage.setItem('fluester_cooldown_reset', val);
+        }
+
+        cooldownResetSlider.addEventListener('input', (e) => {
+            updateCooldownResetUI(e.target.value);
         });
 
         dampingSelect.addEventListener('change', (e) => {
@@ -723,7 +749,7 @@
                     await audioContext.resume();
                 }
 
-                // NEU: Bandpass-Filter erstellen, um Stimmen zu isolieren (Brummen dämpfen)
+                // Bandpass-Filter erstellen, um Stimmen zu isolieren (Brummen dämpfen)
                 biquadFilter = audioContext.createBiquadFilter();
                 biquadFilter.type = 'bandpass';
                 biquadFilter.frequency.value = 1000; // Optimaler Mittelpunkt für menschliche Stimmen
@@ -809,20 +835,23 @@
             // 1. Textanzeige aktualisieren
             dbDisplay.innerText = `${db.toFixed(1)} dB`;
 
-            // 2. Wenn es laut ist, setzen wir die Sperre für alle geplatzten Monster zurück
-            if (db >= config.minDb) {
+            // 2. Sperre NUR zurücksetzen, wenn die gemessene Lautstärke den einstellbaren 
+            // Schwellenwert (cooldownResetDb) überschreitet.
+            if (db >= state.cooldownResetDb) {
                 state.lastLoudTime = now;
             }
 
             // Prüfung, ob die globale 15-Sekunden-Ruhephase erreicht ist
-            const isGlobalQuiet = (now - state.lastLoudTime) >= config.cooldownMs;
+            const elapsed = now - state.lastLoudTime;
+            const remainingMs = config.cooldownMs - elapsed;
+            const isGlobalQuiet = elapsed >= config.cooldownMs;
             
             // Vorhandensein von geplatzten Monstern prüfen für HUD-Anzeige
             const anyMonsterPopped = state.monsters.some(m => m.isPopped);
 
             // Countdown im HUD visualisieren
             if (anyMonsterPopped && !isGlobalQuiet && state.lastLoudTime > 0) {
-                const remainingSec = Math.max(0, Math.ceil((config.cooldownMs - (now - state.lastLoudTime)) / 1000));
+                const remainingSec = Math.max(0, Math.ceil(remainingMs / 1000));
                 cooldownDisplay.innerText = `Sperre: ${remainingSec}s`;
                 cooldownDisplay.classList.remove('hidden');
             } else {
@@ -848,15 +877,43 @@
 
                 if (shouldBePopped && !m.isPopped) {
                     m.isPopped = true;
-                    m.el.classList.add('popped'); // Schnelles, wuchtiges Ausblenden
-                    
                     triggerPopParticles(m);
                     triggerShockwave(m);
                 } else if (!shouldBePopped && m.isPopped) {
                     if (isGlobalQuiet) {
                         m.isPopped = false;
-                        m.el.classList.remove('popped'); // Weich zurückfedern
                     }
+                }
+
+                // Skalierung und Opazität basierend auf der verbleibenden globalen Sperrzeit steuern
+                let targetScale = 1.0;
+                let opacity = 1.0;
+
+                if (m.isPopped) {
+                    if (isGlobalQuiet) {
+                        targetScale = 1.0;
+                        opacity = 1.0;
+                    } else if (remainingMs <= 5000 && remainingMs > 0) {
+                        // Letzte 5 Sekunden: Die Monster erscheinen als winzige Punkte und wachsen gleichmäßig auf Originalgröße an
+                        const progress = (5000 - remainingMs) / 5000; // Wert von 0 bis 1
+                        targetScale = 0.15 + progress * 0.85; // Skaliert von 15% bis 100%
+                        opacity = 1.0;
+                    } else {
+                        // Über 5 Sekunden verbleibend: Das Monster ist vollständig verschwunden
+                        targetScale = 0.0;
+                        opacity = 0.0;
+                    }
+                }
+
+                // CSS-Variablenwert dynamisch anpassen
+                m.el.style.setProperty('--monster-scale', targetScale);
+                m.el.style.opacity = opacity;
+
+                // Deaktiviere Interaktionen für nicht sichtbare Monster
+                if (targetScale === 0) {
+                    m.el.style.pointerEvents = 'none';
+                } else {
+                    m.el.style.pointerEvents = 'auto';
                 }
             });
         }
