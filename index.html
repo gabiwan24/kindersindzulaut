@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="de" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AcousticMeter - Mobiler Lautstärkemesser</title>
+    <!-- Tailwind CSS für erstklassiges UI-Design -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons via CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Sanfte Farb- und UI-Übergänge */
+        body {
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        .sidebar-transition {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        /* Pulsierender Effekt für den Sender-Button */
+        @keyframes pulse-glowing {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { transform: scale(1.03); box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        .pulse-active {
+            animation: pulse-glowing 2s infinite;
+        }
+    </style>
+</head>
+<body class="h-full text-slate-100 flex flex-col justify-between overflow-hidden bg-slate-950 font-sans">
+
+    <!-- HEADER -->
+    <header class="w-full px-6 py-4 flex items-center justify-between z-10 bg-slate-900/60 backdrop-blur-md border-b border-slate-800/40">
+        <div class="flex items-center space-x-2">
+            <div class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse" id="status-led"></div>
+            <span class="font-bold tracking-wider text-lg">ACOUSTIC<span class="text-emerald-400">METER</span></span>
+        </div>
+        
+        <div class="flex items-center space-x-4">
+            <!-- Aktueller Modus-Badge -->
+            <span id="role-badge" class="px-3 py-1 text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full">
+                Modus: Empfänger
+            </span>
+            <!-- Hamburger Button -->
+            <button id="menu-toggle" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 focus:outline-none transition-colors" aria-label="Menü öffnen">
+                <i data-lucide="menu" class="w-6 h-6"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- MAIN INTERFACE -->
+    <main class="flex-1 flex flex-col items-center justify-center px-4 relative">
+        
+        <!-- ================= EMPFÄNGER INTERFACE ================= -->
+        <div id="receiver-view" class="w-full max-w-lg flex flex-col items-center justify-center space-y-8 py-6">
+            <!-- Haupt-Kreisanzeige (dB-Meter) -->
+            <div class="relative w-72 h-72 rounded-full border-4 border-slate-800/80 bg-slate-950/40 backdrop-blur-lg flex flex-col items-center justify-center shadow-2xl transition-all duration-300" id="db-circle">
+                <div class="absolute inset-4 rounded-full border border-dashed border-slate-700/50"></div>
+                
+                <!-- Mikrofon-Symbol / Startknopf im Kreis -->
+                <button id="mic-toggle-btn" class="w-16 h-16 rounded-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 flex items-center justify-center transition-transform hover:scale-105 shadow-lg mb-2 focus:outline-none">
+                    <i data-lucide="mic" class="w-8 h-8" id="mic-icon"></i>
+                </button>
+
+                <!-- Numerische Anzeige -->
+                <div class="text-center">
+                    <span id="db-value" class="text-6xl font-black tracking-tighter">0.0</span>
+                    <span class="text-xl font-medium text-slate-400 block -mt-1">dB (SPL)</span>
+                </div>
+                
+                <!-- Lautstärkecharakteristik Beschreibung -->
+                <div id="db-desc" class="text-sm font-semibold tracking-wide text-slate-400 mt-2 bg-slate-900/80 px-3 py-1 rounded-full border border-slate-800/60">
+                    Inaktiv
+                </div>
+            </div>
+
+            <!-- Pegelbalken (Schnellanzeige) -->
+            <div class="w-full bg-slate-900/60 border border-slate-800 rounded-2xl p-4 shadow-lg backdrop-blur-sm">
+                <div class="flex justify-between text-xs text-slate-400 mb-2 font-mono">
+                    <span>0 dB (Ruhe)</span>
+                    <span>60 dB (Gespräch)</span>
+                    <span>120 dB (Schmerzgrenze)</span>
+                </div>
+                <div class="w-full h-4 bg-slate-950 rounded-full overflow-hidden p-0.5 border border-slate-800">
+                    <div id="volume-bar" class="h-full w-0 bg-gradient-to-r from-emerald-500 via-amber-500 to-rose-500 rounded-full transition-all duration-75"></div>
+                </div>
+            </div>
+
+            <!-- Live-Zeitverlauf (Scrolling Canvas) -->
+            <div class="w-full bg-slate-900/60 border border-slate-800 rounded-2xl p-3 shadow-lg backdrop-blur-sm">
+                <div class="flex items-center space-x-1.5 text-xs text-slate-400 mb-2 uppercase tracking-wider font-semibold">
+                    <i data-lucide="activity" class="w-4 h-4 text-emerald-400"></i>
+                    <span>Zeitverlauf (Letzte 15 Sek.)</span>
+                </div>
+                <canvas id="history-chart" class="w-full h-24 bg-slate-950/80 rounded-lg border border-slate-900"></canvas>
+            </div>
+        </div>
+
+        <!-- ================= SENDER INTERFACE (Standardmäßig versteckt) ================= -->
+        <div id="sender-view" class="w-full max-w-lg hidden flex flex-col items-center justify-center space-y-8 py-6">
+            <div class="text-center max-w-md">
+                <h2 class="text-2xl font-bold mb-2 text-rose-400">Kalibrierton-Generator</h2>
+                <p class="text-sm text-slate-400 leading-relaxed">
+                    Dieses Gerät dient als Tonquelle. Platziere es in typischem Abstand (z.B. 1 Meter) zum Empfänger-Laptop, um die Messgenauigkeit abzugleichen.
+                </p>
+            </div>
+
+            <!-- Großer Testton-Button -->
+            <button id="tone-toggle-btn" class="w-64 h-64 rounded-full border-8 border-slate-800/80 bg-slate-950/60 backdrop-blur-lg flex flex-col items-center justify-center shadow-2xl transition-all duration-300 focus:outline-none">
+                <div id="tone-btn-inner" class="w-48 h-48 rounded-full bg-rose-600 hover:bg-rose-500 text-white flex flex-col items-center justify-center shadow-lg transition-colors">
+                    <i data-lucide="volume-2" class="w-16 h-16 mb-2" id="tone-icon"></i>
+                    <span id="tone-btn-text" class="font-bold tracking-wide text-sm">TON STARTEN</span>
+                </div>
+            </button>
+
+            <!-- Sender Controls -->
+            <div class="w-full bg-slate-900/60 border border-slate-800 rounded-2xl p-5 shadow-lg backdrop-blur-sm space-y-4">
+                <div>
+                    <div class="flex justify-between text-sm font-semibold mb-2">
+                        <span>Frequenz (Sinuswelle)</span>
+                        <span id="freq-label" class="text-rose-400 font-mono">1000 Hz</span>
+                    </div>
+                    <input type="range" id="freq-slider" min="440" max="2000" step="10" value="1000" class="w-full accent-rose-500 h-2 bg-slate-950 rounded-lg appearance-none cursor-pointer">
+                </div>
+
+                <div>
+                    <div class="flex justify-between text-sm font-semibold mb-2">
+                        <span>Sender-Lautstärke</span>
+                        <span id="volume-label" class="text-rose-400 font-mono">80%</span>
+                    </div>
+                    <input type="range" id="volume-slider" min="0" max="100" step="5" value="80" class="w-full accent-rose-500 h-2 bg-slate-950 rounded-lg appearance-none cursor-pointer">
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- CUSTOM NOTIFICATION BANNER (Als Ersatz für unschöne alerts) -->
+    <div id="notification-banner" class="fixed top-20 left-1/2 -translate-x-1/2 w-[90%] max-w-md p-4 rounded-xl bg-slate-900 border border-slate-800 shadow-2xl flex items-start space-x-3 transform -translate-y-32 opacity-0 transition-all duration-300 z-50">
+        <div class="p-1 rounded bg-slate-800" id="notification-icon-wrapper">
+            <i data-lucide="info" class="w-5 h-5 text-emerald-400" id="notification-icon"></i>
+        </div>
+        <div class="flex-1">
+            <h4 id="notification-title" class="font-bold text-sm">Hinweis</h4>
+            <p id="notification-message" class="text-xs text-slate-400 mt-1">Nachricht wird geladen...</p>
+        </div>
+        <button id="notification-close" class="text-slate-500 hover:text-slate-300">
+            <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+    </div>
+
+    <!-- CALIBRATION MODAL (EMPFÄNGER) -->
+    <div id="calibration-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-40 hidden opacity-0 transition-opacity duration-300">
+        <div class="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-6">
+            <div class="flex justify-between items-start">
+                <div class="flex items-center space-x-2">
+                    <i data-lucide="sliders" class="w-6 h-6 text-emerald-400"></i>
+                    <h3 class="text-xl font-bold">Geräte-Kalibrierung</h3>
+                </div>
+                <button id="close-modal-btn" class="p-1 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <!-- Schritt-für-Schritt-Anleitung -->
+            <div id="cal-step-1" class="space-y-4">
+                <p class="text-sm text-slate-300 leading-relaxed">
+                    Führe diese Schritte aus, um einen angenäherten Dezibelwert für dein Laptop-Mikrofon einzustellen:
+                </p>
+                <ol class="space-y-3 text-xs text-slate-400 list-decimal pl-4">
+                    <li>Öffne diese Website auf einem **zweiten Gerät** (z.B. Handy) und stelle es im Menü auf <strong class="text-rose-400">"Sender"</strong> um.</li>
+                    <li>Platziere das Handy ca. **1 Meter entfernt** von diesem Laptop.</li>
+                    <li>Starte den Testton auf dem Handy. Achte darauf, dass der Raum ansonsten absolut **leise** ist.</li>
+                    <li>Klicke unten auf <strong class="text-emerald-400">"Messen & Kalibrieren"</strong>. Das Messgerät analysiert den Pegel des Testtons für 3 Sekunden und passt den Offset an.</li>
+                </ol>
+                
+                <div class="bg-slate-950/80 rounded-xl p-3 border border-slate-800 text-xs flex justify-between items-center">
+                    <span class="text-slate-400">Zielwert für Referenzton:</span>
+                    <div class="flex items-center space-x-2">
+                        <input type="number" id="target-db-input" value="70" class="w-12 bg-slate-900 text-center font-bold text-emerald-400 border border-slate-700 rounded p-1 focus:outline-none focus:border-emerald-500">
+                        <span class="font-semibold">dB</span>
+                    </div>
+                </div>
+
+                <button id="start-measuring-btn" class="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl transition-colors flex items-center justify-center space-x-2">
+                    <i data-lucide="play" class="w-4 h-4"></i>
+                    <span>Messen & Kalibrieren</span>
+                </button>
+            </div>
+
+            <!-- Messungs-Countdown-Animation -->
+            <div id="cal-step-2" class="hidden flex flex-col items-center justify-center py-8 space-y-4">
+                <div class="w-20 h-20 rounded-full border-4 border-slate-800 border-t-emerald-500 animate-spin flex items-center justify-center">
+                    <i data-lucide="mic" class="w-8 h-8 text-emerald-500 animate-pulse"></i>
+                </div>
+                <div class="text-center">
+                    <h4 class="font-bold text-lg text-emerald-400">Messung läuft...</h4>
+                    <p class="text-xs text-slate-400 mt-1">Bitte halte den Raum leise und den Testton konstant.</p>
+                </div>
+                <div class="w-full bg-slate-950 rounded-full h-2 overflow-hidden max-w-xs">
+                    <div id="cal-progress-bar" class="bg-emerald-500 h-full w-0 transition-all duration-100"></div>
+                </div>
+            </div>
+
+            <!-- Kalibrierungs-Erfolg -->
+            <div id="cal-step-3" class="hidden flex flex-col items-center justify-center py-6 space-y-4 text-center">
+                <div class="w-16 h-16 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center">
+                    <i data-lucide="check" class="w-8 h-8 text-emerald-400"></i>
+                </div>
+                <div>
+                    <h4 class="font-bold text-lg text-emerald-400">Kalibrierung erfolgreich!</h4>
+                    <p id="cal-result-text" class="text-xs text-slate-400 mt-1">Der Mikrofon-Offset wurde neu angepasst.</p>
+                </div>
+                <button id="cal-success-done" class="w-full py-2.5 bg-slate-800 hover:bg-slate-700 font-bold rounded-xl transition-colors">
+                    Schließen
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SIDEBAR MENU -->
+    <div id="sidebar" class="fixed top-0 right-0 h-full w-80 bg-slate-900/95 backdrop-blur-md border-l border-slate-800/80 z-30 sidebar-transition translate-x-full shadow-2xl flex flex-col justify-between">
+        <div class="p-6 space-y-8 overflow-y-auto flex-1">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+                <h3 class="text-lg font-bold">Einstellungen</h3>
+                <button id="menu-close" class="p-1 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <!-- Geräte-Rolle definieren -->
+            <div class="space-y-3">
+                <h4 class="text-xs font-semibold tracking-wider text-slate-400 uppercase">Geräte-Rolle</h4>
+                <div class="grid grid-cols-2 gap-2 bg-slate-950 p-1 rounded-xl border border-slate-800">
+                    <button id="set-receiver-btn" class="py-2 text-xs font-bold rounded-lg transition-colors bg-emerald-500 text-slate-950">
+                        Empfänger
+                    </button>
+                    <button id="set-sender-btn" class="py-2 text-xs font-bold rounded-lg transition-colors text-slate-400 hover:text-slate-100">
+                        Sender
+                    </button>
+                </div>
+            </div>
+
+            <!-- Empfänger-Einstellungs-Panel (Nur sichtbar wenn Empfänger aktiv) -->
+            <div id="receiver-settings-panel" class="space-y-6">
+                <!-- Kalibrierung starten Button -->
+                <div class="space-y-3">
+                    <h4 class="text-xs font-semibold tracking-wider text-slate-400 uppercase">Eichung</h4>
+                    <button id="open-cal-modal-btn" class="w-full py-3 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 hover:text-emerald-300 font-bold rounded-xl transition-all flex items-center justify-center space-x-2">
+                        <i data-lucide="sliders" class="w-4 h-4"></i>
+                        <span>Automatisch Kalibrieren</span>
+                    </button>
+                </div>
+
+                <!-- Manueller Offset Schieberegler -->
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center">
+                        <h4 class="text-xs font-semibold tracking-wider text-slate-400 uppercase">Feinjustierung (Offset)</h4>
+                        <span id="offset-label" class="text-xs font-bold text-emerald-400 font-mono">+100.0 dB</span>
+                    </div>
+                    <input type="range" id="offset-slider" min="30" max="150" step="0.5" value="100" class="w-full accent-emerald-500 h-2 bg-slate-950 rounded-lg appearance-none cursor-pointer">
+                    <p class="text-[10px] text-slate-500 leading-tight">
+                        Erhöhe oder verringere den Offset manuell, um die dB-Anzeige an die Umgebungsrealität anzupassen.
+                    </p>
+                </div>
+
+                <!-- Reaktionsgeschwindigkeit -->
+                <div class="space-y-3">
+                    <h4 class="text-xs font-semibold tracking-wider text-slate-400 uppercase">Dämpfung (Damping)</h4>
+                    <select id="damping-select" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs font-semibold text-slate-300 focus:outline-none focus:border-emerald-500">
+                        <option value="0.95">Träge (Sehr ruhige Werte)</option>
+                        <option value="0.85" selected>Standard (Menschlicher Trägheit nachempfunden)</option>
+                        <option value="0.60">Direkt (Schnelle Spitzenwertreaktion)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Sender-Einstellungs-Panel (Nur sichtbar wenn Sender aktiv) -->
+            <div id="sender-settings-panel" class="hidden space-y-4">
+                <p class="text-xs text-slate-400 bg-slate-950/60 p-3 rounded-xl border border-slate-800/60 leading-relaxed">
+                    Solltest du keinen Ton hören, stelle sicher, dass die Medienlautstärke deines Handys laut gedreht ist und der Stummschalter deaktiviert ist.
+                </p>
+            </div>
+        </div>
+
+        <div class="p-6 bg-slate-950 border-t border-slate-800 text-[10px] text-slate-500 text-center">
+            AcousticMeter v1.2 &bull; Entwickelt für informelle Näherungsmessungen. Keine rechtliche Relevanz.
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="w-full py-4 text-center text-[11px] text-slate-500 z-10 bg-slate-900/40 border-t border-slate-800/30">
+        Nutzung des Mikrofons ausschließlich lokal im Web-Sandbox-Sicherheitskontext. Keine Datenerfassung.
+    </footer>
+
+    <!-- LOGIK & AUDIO-STEUERUNG -->
+    <script>
+        // --- Globale App-Zustände ---
+        let appState = {
+            role: 'receiver',             // 'receiver' oder 'sender'
+            isMeasuring: false,           // Läuft das Mikrofon?
+            isPlayingTone: false,         // Läuft der Testton?
+            offset: 100.0,                // Logarithmischer Additionswert zur Kalibrierung
+            targetDb: 70.0,               // Standard-Referenzpegel für den Testton
+            damping: 0.85,                // Smoothing-Koeffizient
+            currentDb: 0,
+            smoothDb: 30,                 // Gedämpfter Wert für die Anzeige
+            history: Array(150).fill(30)  // Messwerte für Diagramm
+        };
+
+        // --- Audio Context Variablen ---
+        let audioContext = null;
+        let mediaStream = null;
+        let analyser = null;
+        let sourceNode = null;
+        let audioProcessorId = null;
+
+        // --- Sender Audio Variablen ---
+        let senderAudioContext = null;
+        let oscillator = null;
+        let gainNode = null;
+
+        // --- Lokalen Speicher auslesen ---
+        const savedOffset = localStorage.getItem('db_offset');
+        if (savedOffset !== null) {
+            appState.offset = parseFloat(savedOffset);
+        }
+
+        // --- DOM Elements ---
+        const menuToggle = document.getElementById('menu-toggle');
+        const menuClose = document.getElementById('menu-close');
+        const sidebar = document.getElementById('sidebar');
+        const setReceiverBtn = document.getElementById('set-receiver-btn');
+        const setSenderBtn = document.getElementById('set-sender-btn');
+        const receiverView = document.getElementById('receiver-view');
+        const senderView = document.getElementById('sender-view');
+        const receiverSettingsPanel = document.getElementById('receiver-settings-panel');
+        const senderSettingsPanel = document.getElementById('sender-settings-panel');
+        const roleBadge = document.getElementById('role-badge');
+        const statusLed = document.getElementById('status-led');
+        const micToggleBtn = document.getElementById('mic-toggle-btn');
+        const micIcon = document.getElementById('mic-icon');
+        const dbValueEl = document.getElementById('db-value');
+        const dbDescEl = document.getElementById('db-desc');
+        const dbCircle = document.getElementById('db-circle');
+        const volumeBar = document.getElementById('volume-bar');
+        const historyCanvas = document.getElementById('history-chart');
+        const canvasCtx = historyCanvas.getContext('2d');
+        const offsetSlider = document.getElementById('offset-slider');
+        const offsetLabel = document.getElementById('offset-label');
+        const dampingSelect = document.getElementById('damping-select');
+        const toneToggleBtn = document.getElementById('tone-toggle-btn');
+        const toneBtnInner = document.getElementById('tone-btn-inner');
+        const toneIcon = document.getElementById('tone-icon');
+        const toneBtnText = document.getElementById('tone-btn-text');
+        const freqSlider = document.getElementById('freq-slider');
+        const freqLabel = document.getElementById('freq-label');
+        const volumeSlider = document.getElementById('volume-slider');
+        const volumeLabel = document.getElementById('volume-label');
+        const openCalModalBtn = document.getElementById('open-cal-modal-btn');
+        const closeCalModalBtn = document.getElementById('close-modal-btn');
+        const calModal = document.getElementById('calibration-modal');
+        const startMeasuringBtn = document.getElementById('start-measuring-btn');
+        const calStep1 = document.getElementById('cal-step-1');
+        const calStep2 = document.getElementById('cal-step-2');
+        const calStep3 = document.getElementById('cal-step-3');
+        const calProgressBar = document.getElementById('cal-progress-bar');
+        const calResultText = document.getElementById('cal-result-text');
+        const calSuccessDone = document.getElementById('cal-success-done');
+        const targetDbInput = document.getElementById('target-db-input');
+
+        // Notification Elements
+        const notificationBanner = document.getElementById('notification-banner');
+        const notificationTitle = document.getElementById('notification-title');
+        const notificationMessage = document.getElementById('notification-message');
+        const notificationIconWrapper = document.getElementById('notification-icon-wrapper');
+        const notificationIcon = document.getElementById('notification-icon');
+        const notificationClose = document.getElementById('notification-close');
+
+        // --- Lucide Icons Initialisieren ---
+        lucide.createIcons();
+
+        // Canvas anpassen für responsive Schärfe
+        function resizeCanvas() {
+            const rect = historyCanvas.getBoundingClientRect();
+            historyCanvas.width = rect.width * window.devicePixelRatio;
+            historyCanvas.height = rect.height * window.devicePixelRatio;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // --- Custom Banner Utility (Kein window.alert!) ---
+        function showNotification(title, message, type = 'info') {
+            notificationTitle.innerText = title;
+            notificationMessage.innerText = message;
+            
+            // Icon & Farbpalette anpassen
+            if (type === 'error') {
+                notificationIconWrapper.className = 'p-1 rounded bg-rose-950 border border-rose-800/40';
+                notificationIcon.setAttribute('data-lucide', 'alert-triangle');
+                notificationIcon.className = 'w-5 h-5 text-rose-400';
+            } else if (type === 'success') {
+                notificationIconWrapper.className = 'p-1 rounded bg-emerald-950 border border-emerald-800/40';
+                notificationIcon.setAttribute('data-lucide', 'check-check');
+                notificationIcon.className = 'w-5 h-5 text-emerald-400';
+            } else {
+                notificationIconWrapper.className = 'p-1 rounded bg-slate-800 border border-slate-700/40';
+                notificationIcon.setAttribute('data-lucide', 'info');
+                notificationIcon.className = 'w-5 h-5 text-emerald-400';
+            }
+            lucide.createIcons();
+
+            // Slide in Animation
+            notificationBanner.classList.remove('-translate-y-32', 'opacity-0');
+            notificationBanner.classList.add('translate-y-0', 'opacity-100');
+
+            // Automatischer Timeout
+            setTimeout(() => {
+                closeNotification();
+            }, 6000);
+        }
+
+        function closeNotification() {
+            notificationBanner.classList.remove('translate-y-0', 'opacity-100');
+            notificationBanner.classList.add('-translate-y-32', 'opacity-0');
+        }
+        notificationClose.addEventListener('click', closeNotification);
+
+        // --- Sidebar Menu Steuerung ---
+        menuToggle.addEventListener('click', () => {
+            sidebar.classList.remove('translate-x-full');
+        });
+        menuClose.addEventListener('click', () => {
+            sidebar.classList.add('translate-x-full');
+        });
+
+        // --- Rollenwechsel (Sender / Empfänger) ---
+        setReceiverBtn.addEventListener('click', () => {
+            switchRole('receiver');
+        });
+        setSenderBtn.addEventListener('click', () => {
+            switchRole('sender');
+        });
+
+        function switchRole(role) {
+            appState.role = role;
+            if (role === 'receiver') {
+                // UI Toggle
+                setReceiverBtn.className = "py-2 text-xs font-bold rounded-lg transition-colors bg-emerald-500 text-slate-950";
+                setSenderBtn.className = "py-2 text-xs font-bold rounded-lg transition-colors text-slate-400 hover:text-slate-100";
+                receiverView.classList.remove('hidden');
+                senderView.classList.add('hidden');
+                receiverSettingsPanel.classList.remove('hidden');
+                senderSettingsPanel.classList.add('hidden');
+                roleBadge.innerText = "Modus: Empfänger";
+                roleBadge.className = "px-3 py-1 text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full";
+                statusLed.className = appState.isMeasuring ? "w-3 h-3 rounded-full bg-emerald-500 animate-pulse" : "w-3 h-3 rounded-full bg-slate-700";
+
+                // Audio stop (Sender)
+                stopTestTone();
+            } else {
+                // UI Toggle
+                setSenderBtn.className = "py-2 text-xs font-bold rounded-lg transition-colors bg-rose-500 text-slate-950";
+                setReceiverBtn.className = "py-2 text-xs font-bold rounded-lg transition-colors text-slate-400 hover:text-slate-100";
+                senderView.classList.remove('hidden');
+                receiverView.classList.add('hidden');
+                senderSettingsPanel.classList.remove('hidden');
+                receiverSettingsPanel.classList.add('hidden');
+                roleBadge.innerText = "Modus: Sender";
+                roleBadge.className = "px-3 py-1 text-xs font-semibold bg-rose-500/20 text-rose-300 border border-rose-500/30 rounded-full";
+                statusLed.className = appState.isPlayingTone ? "w-3 h-3 rounded-full bg-rose-500 animate-pulse" : "w-3 h-3 rounded-full bg-slate-700";
+
+                // Audio stop (Receiver)
+                stopMeasuring();
+            }
+            sidebar.classList.add('translate-x-full');
+        }
+
+        // --- Offset Initialisierung ---
+        function updateOffsetUI(val) {
+            appState.offset = parseFloat(val);
+            offsetSlider.value = val;
+            offsetLabel.innerText = `+${parseFloat(val).toFixed(1)} dB`;
+            localStorage.setItem('db_offset', val);
+        }
+        offsetSlider.value = appState.offset;
+        updateOffsetUI(appState.offset);
+
+        offsetSlider.addEventListener('input', (e) => {
+            updateOffsetUI(e.target.value);
+        });
+
+        dampingSelect.addEventListener('change', (e) => {
+            appState.damping = parseFloat(e.target.value);
+        });
+
+        // --- EMPFÄNGER: Audio-Schnittstelle & Messung ---
+        async function startMeasuring() {
+            if (appState.isMeasuring) return;
+
+            try {
+                // Erforderliche Filter deaktivieren für realistischere Messung
+                const constraints = {
+                    audio: {
+                        echoCancellation: false,
+                        noiseSuppression: false,
+                        autoGainControl: false
+                    }
+                };
+                mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+                
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 1024; // Ausgewogene zeitliche Auflösung
+
+                sourceNode = audioContext.createMediaStreamSource(mediaStream);
+                sourceNode.connect(analyser);
+
+                appState.isMeasuring = true;
+                micToggleBtn.className = "w-16 h-16 rounded-full bg-rose-500 hover:bg-rose-400 text-slate-950 flex items-center justify-center transition-transform hover:scale-105 shadow-lg mb-2 focus:outline-none";
+                micIcon.setAttribute('data-lucide', 'mic-off');
+                statusLed.className = "w-3 h-3 rounded-full bg-emerald-500 animate-pulse";
+                lucide.createIcons();
+
+                processAudio();
+            } catch (err) {
+                console.error("Mikrofon-Zugriff fehlgeschlagen: ", err);
+                showNotification(
+                    "Mikrofon-Zulassung fehlt", 
+                    "Es konnte kein Zugriff auf das Mikrofon etabliert werden. Bitte prüfe deine Browsereinstellungen.", 
+                    "error"
+                );
+            }
+        }
+
+        function stopMeasuring() {
+            if (!appState.isMeasuring) return;
+
+            appState.isMeasuring = false;
+            cancelAnimationFrame(audioProcessorId);
+
+            if (mediaStream) {
+                mediaStream.getTracks().forEach(track => track.stop());
+            }
+            if (audioContext && audioContext.state !== 'closed') {
+                audioContext.close();
+            }
+
+            micToggleBtn.className = "w-16 h-16 rounded-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 flex items-center justify-center transition-transform hover:scale-105 shadow-lg mb-2 focus:outline-none";
+            micIcon.setAttribute('data-lucide', 'mic');
+            statusLed.className = "w-3 h-3 rounded-full bg-slate-700";
+            dbValueEl.innerText = "0.0";
+            dbDescEl.innerText = "Inaktiv";
+            dbCircle.style.transform = "scale(1)";
+            volumeBar.style.width = "0%";
+            lucide.createIcons();
+            
+            // Sanftes Zurücksetzen des Hintergrunds
+            document.body.style.backgroundColor = 'rgb(3, 7, 18)';
+        }
+
+        micToggleBtn.addEventListener('click', () => {
+            if (appState.isMeasuring) {
+                stopMeasuring();
+            } else {
+                startMeasuring();
+            }
+        });
+
+        // --- Mathematische Verarbeitung & Visualisierung ---
+        const timeBuffer = new Float32Array(1024);
+        let calibrationSamples = [];
+        let isCollectingSamples = false;
+
+        function processAudio() {
+            if (!appState.isMeasuring) return;
+
+            analyser.getFloatTimeDomainData(timeBuffer);
+
+            // 1. RMS (Root Mean Square) berechnen
+            let sumSquare = 0;
+            for (let i = 0; i < timeBuffer.length; i++) {
+                sumSquare += timeBuffer[i] * timeBuffer[i];
+            }
+            let rms = Math.sqrt(sumSquare / timeBuffer.length);
+
+            // 2. Umrechnung in dBFS (dB relativ zum Maximum des digitalen Mikrofons)
+            let dbfs = 20 * Math.log10(rms);
+
+            // Abfangen von Extremwerten und mathematischen Anomalien (Stille = minus unendlich)
+            if (dbfs < -120 || isNaN(dbfs) || !isFinite(dbfs)) {
+                dbfs = -120;
+            }
+
+            // Für die automatische Kalibrierung Rohdaten mitschreiben
+            if (isCollectingSamples) {
+                calibrationSamples.push(dbfs);
+            }
+
+            // 3. Offset anwenden
+            let rawDb = dbfs + appState.offset;
+            if (rawDb < 0) rawDb = 0; // Untere physikalische Grenze abschneiden
+
+            // 4. Glättungsfilter anwenden (Gedämpfte Reaktion)
+            appState.smoothDb = (appState.smoothDb * appState.damping) + (rawDb * (1 - appState.damping));
+            appState.currentDb = appState.smoothDb;
+
+            // UI Aktualisieren
+            drawRealtimeUI(appState.currentDb);
+
+            // Historie fortschreiben
+            appState.history.push(appState.currentDb);
+            if (appState.history.length > 150) {
+                appState.history.shift();
+            }
+            drawHistoryChart();
+
+            audioProcessorId = requestAnimationFrame(processAudio);
+        }
+
+        // --- Dynamische Farbinformationen extrahieren ---
+        function getAmbientColor(db) {
+            // Skalierung: 30 dB (sehr leise) bis 90 dB (sehr laut)
+            const minDb = 30;
+            const maxDb = 90;
+            let percent = (db - minDb) / (maxDb - minDb);
+            percent = Math.max(0, Math.min(1, percent)); // Wert beschränken auf [0, 1]
+
+            // Übergang HSL: Grün (140) -> Gelb (60) -> Rot (0)
+            const hue = 140 - (percent * 140);
+            const saturation = 80 + (percent * 20); // Höhere Sättigung bei Lautstärke
+            const lightness = 6 + (percent * 12);   // Geringe Helligkeit für edle, dezente Hintergrund-Ausleuchtung
+
+            return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+        }
+
+        // --- Beschreibung der Akustischen Situation ---
+        function getSoundDescription(db) {
+            if (db < 35) return "Extrem leise (Flüstern)";
+            if (db < 50) return "Ruhige Wohngegend";
+            if (db < 65) return "Normales Gespräch";
+            if (db < 75) return "Laufeffekt / Büro";
+            if (db < 85) return "Verkehrslärm / Laut";
+            return "Gehörgefährdend!";
+        }
+
+        // --- Echtzeit UI Updates ---
+        function drawRealtimeUI(db) {
+            // Textwert
+            dbValueEl.innerText = db.toFixed(1);
+            dbDescEl.innerText = getSoundDescription(db);
+
+            // Umgebungsfarbe anpassen (Fluid Transition)
+            const ambientColor = getAmbientColor(db);
+            document.body.style.backgroundColor = ambientColor;
+
+            // Kreisanzeige skalieren und runder Puls
+            const scaleFactor = 1 + (Math.min(db, 100) / 600);
+            dbCircle.style.transform = `scale(${scaleFactor})`;
+
+            // Pegelleiste
+            const progressPercent = Math.min(100, Math.max(0, (db / 120) * 100));
+            volumeBar.style.width = `${progressPercent}%`;
+        }
+
+        // --- Verlaufschart zeichnen ---
+        function drawHistoryChart() {
+            const width = historyCanvas.width;
+            const height = historyCanvas.height;
+            canvasCtx.clearRect(0, 0, width, height);
+
+            if (appState.history.length === 0) return;
+
+            canvasCtx.beginPath();
+            canvasCtx.lineWidth = 3 * window.devicePixelRatio;
+            canvasCtx.lineCap = 'round';
+            canvasCtx.lineJoin = 'round';
+
+            const step = width / (appState.history.length - 1);
+            
+            for (let i = 0; i < appState.history.length; i++) {
+                const db = appState.history[i];
+                // Skalierung: 0 dB bis 100 dB für Diagrammhöhe
+                const yPercent = 1 - (Math.min(db, 100) / 100);
+                const x = i * step;
+                const y = yPercent * (height - 10) + 5; // Abstand halten
+
+                if (i === 0) {
+                    canvasCtx.moveTo(x, y);
+                } else {
+                    canvasCtx.lineTo(x, y);
+                }
+            }
+
+            // Diagramm-Farbverlauf
+            const gradient = canvasCtx.createLinearGradient(0, 0, 0, height);
+            gradient.addColorStop(0, '#f43f5e'); // Rose
+            gradient.addColorStop(0.5, '#f59e0b'); // Amber
+            gradient.addColorStop(1, '#10b981'); // Emerald
+            
+            canvasCtx.strokeStyle = gradient;
+            canvasCtx.stroke();
+        }
+
+        // --- SENDER: Frequenzgenerator & Testton ---
+        function startTestTone() {
+            if (appState.isPlayingTone) return;
+
+            try {
+                senderAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+                oscillator = senderAudioContext.createOscillator();
+                gainNode = senderAudioContext.createGain();
+
+                // Frequenz & Lautstärke einstellen
+                oscillator.type = 'sine';
+                oscillator.frequency.value = parseFloat(freqSlider.value);
+                
+                const volumePercent = parseFloat(volumeSlider.value) / 100;
+                gainNode.gain.value = volumePercent;
+
+                // Verbindungen
+                oscillator.connect(gainNode);
+                gainNode.connect(senderAudioContext.destination);
+
+                oscillator.start();
+                appState.isPlayingTone = true;
+
+                // UI Updates
+                toneBtnInner.className = "w-48 h-48 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white flex flex-col items-center justify-center shadow-lg transition-colors pulse-active";
+                toneIcon.setAttribute('data-lucide', 'square');
+                toneBtnText.innerText = "TON STOPPEN";
+                statusLed.className = "w-3 h-3 rounded-full bg-rose-500 animate-pulse";
+                lucide.createIcons();
+
+            } catch (err) {
+                console.error("Testton-Fehler: ", err);
+                showNotification("Audio-Fehler", "Der Signalgenerator konnte nicht gestartet werden.", "error");
+            }
+        }
+
+        function stopTestTone() {
+            if (!appState.isPlayingTone) return;
+
+            if (oscillator) {
+                oscillator.stop();
+                oscillator.disconnect();
+            }
+            if (gainNode) {
+                gainNode.disconnect();
+            }
+            if (senderAudioContext && senderAudioContext.state !== 'closed') {
+                senderAudioContext.close();
+            }
+
+            appState.isPlayingTone = false;
+
+            // UI Reset
+            toneBtnInner.className = "w-48 h-48 rounded-full bg-rose-600 hover:bg-rose-500 text-white flex flex-col items-center justify-center shadow-lg transition-colors";
+            toneIcon.setAttribute('data-lucide', 'volume-2');
+            toneBtnText.innerText = "TON STARTEN";
+            statusLed.className = "w-3 h-3 rounded-full bg-slate-700";
+            lucide.createIcons();
+        }
+
+        toneToggleBtn.addEventListener('click', () => {
+            if (appState.isPlayingTone) {
+                stopTestTone();
+            } else {
+                startTestTone();
+            }
+        });
+
+        freqSlider.addEventListener('input', (e) => {
+            const freq = e.target.value;
+            freqLabel.innerText = `${freq} Hz`;
+            if (oscillator && appState.isPlayingTone) {
+                oscillator.frequency.value = parseFloat(freq);
+            }
+        });
+
+        volumeSlider.addEventListener('input', (e) => {
+            const volume = e.target.value;
+            volumeLabel.innerText = `${volume}%`;
+            if (gainNode && appState.isPlayingTone) {
+                gainNode.gain.value = parseFloat(volume) / 100;
+            }
+        });
+
+
+        // --- KALIBRIERUNGS-MODAL LOGIK ---
+        openCalModalBtn.addEventListener('click', () => {
+            calModal.classList.remove('hidden');
+            setTimeout(() => {
+                calModal.classList.remove('opacity-0');
+            }, 10);
+            
+            // Reset modal steps
+            calStep1.classList.remove('hidden');
+            calStep2.classList.add('hidden');
+            calStep3.classList.add('hidden');
+            sidebar.classList.add('translate-x-full');
+        });
+
+        function closeModal() {
+            calModal.classList.add('opacity-0');
+            setTimeout(() => {
+                calModal.classList.add('hidden');
+            }, 300);
+        }
+
+        closeCalModalBtn.addEventListener('click', closeModal);
+        calSuccessDone.addEventListener('click', closeModal);
+
+        startMeasuringBtn.addEventListener('click', async () => {
+            // Zielwert validieren
+            let targetValue = parseFloat(targetDbInput.value);
+            if (isNaN(targetValue) || targetValue <= 0 || targetValue > 120) {
+                showNotification("Ungültiger Zielwert", "Bitte gib einen realistischen Wert zwischen 30 und 110 dB an.", "error");
+                return;
+            }
+            appState.targetDb = targetValue;
+
+            // Sicherstellen, dass das Mikrofon läuft
+            if (!appState.isMeasuring) {
+                await startMeasuring();
+            }
+
+            if (!appState.isMeasuring) {
+                showNotification("Mikrofon erforderlich", "Die Kalibrierung benötigt ein aktives Mikrofon.", "error");
+                return;
+            }
+
+            // Schritt 2: Messungsanimation einblenden
+            calStep1.classList.add('hidden');
+            calStep2.classList.remove('hidden');
+
+            calibrationSamples = [];
+            isCollectingSamples = true;
+
+            // Fortschrittsbalken-Animation (3 Sekunden)
+            let duration = 3000;
+            let start = null;
+            
+            function updateProgressBar(timestamp) {
+                if (!start) start = timestamp;
+                let progress = timestamp - start;
+                let percent = Math.min((progress / duration) * 100, 100);
+                calProgressBar.style.width = `${percent}%`;
+
+                if (progress < duration) {
+                    requestAnimationFrame(updateProgressBar);
+                } else {
+                    finishCalibration();
+                }
+            }
+            requestAnimationFrame(updateProgressBar);
+        });
+
+        function finishCalibration() {
+            isCollectingSamples = false;
+
+            if (calibrationSamples.length === 0) {
+                showNotification("Fehler bei der Messung", "Es konnten keine Audiodaten analysiert werden.", "error");
+                calStep1.classList.remove('hidden');
+                calStep2.classList.add('hidden');
+                return;
+            }
+
+            // Durchschnittlichen digitalen Pegel (dBFS) während der 3 Sek ermitteln
+            const sumDbfs = calibrationSamples.reduce((a, b) => a + b, 0);
+            const avgDbfs = sumDbfs / calibrationSamples.length;
+
+            // Berechnung des neuen Offsets:
+            // Formel: Gemessener_Wert = avgDbfs + neuerOffset => neuerOffset = Zielwert - avgDbfs
+            const calculatedOffset = appState.targetDb - avgDbfs;
+
+            // Plausibilitätsprüfung
+            if (calculatedOffset < 10 || calculatedOffset > 180) {
+                showNotification(
+                    "Plausibilitäts-Fehler", 
+                    "Die Messung ergab unplausible Werte. Stelle sicher, dass der Testton läuft und das Gerät nah genug ist.", 
+                    "error"
+                );
+                calStep1.classList.remove('hidden');
+                calStep2.classList.add('hidden');
+                return;
+            }
+
+            // Offset speichern und anwenden
+            updateOffsetUI(calculatedOffset.toFixed(1));
+
+            // Erfolgsfenster anzeigen
+            calStep2.classList.add('hidden');
+            calStep3.classList.remove('hidden');
+            calResultText.innerHTML = `Neuer kalibrierter Offset: <strong>+${calculatedOffset.toFixed(1)} dB</strong>.<br>Die aktuelle Audio-Aufnahme wurde auf den Referenzwert angepasst.`;
+            
+            showNotification("Kalibrierung abgeschlossen", "Offset erfolgreich berechnet und gespeichert.", "success");
+        }
+    </script>
+</body>
+</html>
